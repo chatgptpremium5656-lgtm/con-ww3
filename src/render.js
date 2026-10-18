@@ -55,6 +55,7 @@ const CLABEL = CTY.map((c, ci) => {
   return { x: sx / a, y: sy / a, w: maxx - minx, h: maxy - miny, area: a };
 });
 
+const LORDER = CTY.map((c, i) => i).sort((a, b) => CLABEL[b].area - CLABEL[a].area);
 const MV = {
   cv: null, ctx: null, mini: null, mctx: null, W: 800, H: 600, dpr: 1,
   cam: { cx: WW / 2, cy: WH / 2, z: 1 }, mode: 'political', relTo: -1,
@@ -211,6 +212,7 @@ function collectGroups() {
   for (const [, u] of G.U) {
     if (u.st === 'cargo') continue;
     if (!isVisible(u)) continue;
+    if (u.o !== G.player && !areAllied(u.o, G.player) && !G.war[u.o * NC + G.player] && MV.cam.z < 2.2) continue;
     const d = UNITS[u.t];
     let key, loc = u.loc, moving = false;
     if (u.st === 'out' || u.st === 'back') { key = 'f|' + u.o + '|' + u.id; moving = true; }
@@ -229,6 +231,7 @@ function groupGlyph(g) {
 }
 const CH_W = 30, CH_H = 19;
 function drawChip(ctx, x, y, g, scale, selected) {
+  if (g.o !== G.player && !G.war[g.o * NC + G.player]) { scale *= 0.82; ctx.globalAlpha = 0.88; }
   const w = CH_W * scale, h = CH_H * scale;
   const col = G.C[g.o].color, mine = g.o === G.player;
   const rgb = rgbOf(col);
@@ -242,6 +245,7 @@ function drawChip(ctx, x, y, g, scale, selected) {
   const hp = g.hp / n / 100;
   ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - w / 2, y + h / 2 + 1, w, 3 * scale);
   ctx.fillStyle = hp > 0.6 ? '#5fd35f' : hp > 0.3 ? '#e6c34a' : '#e0503c'; ctx.fillRect(x - w / 2, y + h / 2 + 1, w * hp, 3 * scale);
+  ctx.globalAlpha = 1;
 }
 function drawOverlay() {
   const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr;
@@ -251,15 +255,19 @@ function drawOverlay() {
   const on = (x, y, m) => x > -m && y > -m && x < W + m && y < H + m;
   // country labels
   if (MV.labels) {
-    for (let ci = 0; ci < NC; ci++) {
+    const placed = [];
+    for (const ci of LORDER) {
       const L = CLABEL[ci]; const alive = G ? G.C[ci].alive : true; if (!alive) continue;
       const [sx, sy] = w2s(L.x, L.y);
       if (!on(sx, sy, 100)) continue;
       const wpx = L.w * z, hpx = L.h * z;
-      let fs = Math.min(wpx / Math.max(4, (G ? G.C[ci].n : CTY[ci].n).length) * 1.35, hpx * 0.55, 34);
+      let fs = Math.min(wpx / Math.max(4, (G ? G.C[ci].n : CTY[ci].n).length) * 1.2, hpx * 0.5, 26);
       if (fs < 8.5) continue;
       fs = Math.round(fs);
       ctx.font = `600 ${fs}px "Segoe UI",Roboto,sans-serif`;
+      const nm0 = (G ? G.C[ci].n : CTY[ci].n); const tw = nm0.length * fs * 0.78, th = fs * 1.1; const rc = [sx - tw / 2, sy - fs * 0.6 - th / 2, sx + tw / 2, sy - fs * 0.6 + th / 2];
+      if (placed.some(q => rc[0] < q[2] && rc[2] > q[0] && rc[1] < q[3] && rc[3] > q[1])) continue;
+      placed.push(rc);
       try { ctx.letterSpacing = Math.round(fs * 0.12) + 'px'; } catch (e) { }
       const name = (G ? G.C[ci].n : CTY[ci].n).toUpperCase();
       ctx.globalAlpha = clamp(1.25 - (z - 2.5) / 3.5, 0.18, 1);

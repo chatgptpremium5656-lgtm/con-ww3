@@ -166,7 +166,7 @@ function aiMilitary(C) {
   if (!enemies.length) { C.ai_s.front = null; return; }
   const my = unitsOf(C.id);
   const land = my.filter(u => UNITS[u.t].dom === 'land' && u.st === 'idle');
-  const grace = G.hour < 24 * 5;
+  const grace = G.hour < 24 * 8;
   aiLand(C, enemies, land, my, grace);
   if (grace) return;
   aiAir(C, enemies, my);
@@ -329,7 +329,7 @@ function aiMissiles(C, enemies, my) {
       // nuclear doctrine: retaliation for nukes that hit us / an ally, desperate last stand, or rare fanaticism
       const hits = G.news.filter(n => n.t === 'nuke' && n.c.length > 1 && G.hour - n.h < 24 * 8 && n.c[0] !== C.id && (n.c[1] === C.id || areAllied(n.c[1], C.id)) && !areAllied(n.c[0], C.id));
       const nuker = hits.length ? hits[hits.length - 1].c[0] : -1;
-      const desperate = G.pv[C.cap].cap && G.pv[C.cap].cap.prog > 55 && C.agg >= 3 && G.hour > 24 * 5;
+      const desperate = G.pv[C.cap].cap && G.pv[C.cap].cap.prog > 55 && C.agg >= 3 && G.hour > 24 * 14;
       const fanatic = C.agg >= 5 && G.hour > 24 * 90 && R() < 0.004;
       if (nuker < 0 && !desperate && !fanatic) continue;
       if (nuker < 0 && G.lastAINuke && G.hour - G.lastAINuke < 48) continue;

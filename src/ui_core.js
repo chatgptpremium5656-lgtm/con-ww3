@@ -218,7 +218,7 @@ function refreshHUD(force) {
     const mine = n.f === 'p' || n.c.includes(G.player);
     if (n.f === 'p' || n.f === 'g') {
       latest = n;
-      if (n.f === 'p' || n.t === 'war' || n.t === 'nuke' || n.t === 'elim' || n.t === 'capital') {
+      if (n.f === 'p' || n.t === 'war' || n.t === 'nuke') {
         if (n.t !== 'unit' && n.t !== 'build' || G.speed <= 2) toast(n.x, n.t === 'war' || n.t === 'nuke' || n.t === 'loss' ? (n.t === 'nuke' ? 'nuke' : 'war') : (n.t === 'capture' && n.c[0] === G.player) || n.t === 'research' ? 'good' : '', n.l);
         if (n.t === 'war') Snd.play('war'); else if (n.t === 'capture' || n.t === 'loss') Snd.play('alert'); else if (n.t === 'unit' || n.t === 'build' || n.t === 'research') Snd.play('ok');
         if (!UI.modal || UI.modal !== 'events') { UI.unseen++; }
