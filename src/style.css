@@ -90,7 +90,10 @@ button{font:inherit;color:var(--tx);cursor:pointer}
 #mapmodes{position:absolute;right:-34px;bottom:0;display:flex;flex-direction:column;gap:2px}
 #mapmodes button{width:26px;height:24px;font-size:13px;padding:0;background:#16273a;border:1px solid #35516f;border-radius:3px}
 #mapmodes button.on{border-color:var(--acc);background:#2a4262}
-#ticker{position:absolute;left:260px;right:360px;bottom:4px;height:22px;background:rgba(8,16,26,.8);border:1px solid #223b55;border-radius:11px;padding:0 12px;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;font-size:12px;z-index:4}
+#legend{left:330px;bottom:30px;padding:6px 10px;font-size:11.5px;min-width:190px;background:rgba(10,22,34,.9);pointer-events:none}
+#legend .lg{display:flex;align-items:center;gap:6px;margin:2px 0}#legend i{display:inline-block;width:14px;height:10px;border-radius:2px}
+#legend .grad{height:8px;border-radius:4px;margin:4px 0 2px}
+#ticker{position:absolute;left:330px;right:360px;bottom:4px;height:22px;background:rgba(8,16,26,.8);border:1px solid #223b55;border-radius:11px;padding:0 12px;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;font-size:12px;z-index:4}
 #toasts{position:absolute;top:52px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;z-index:9;max-width:70%}
 .toast{background:rgba(10,22,34,.94);border:1px solid #35516f;border-left:4px solid var(--acc);border-radius:4px;padding:6px 12px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.5);animation:tin .25s;pointer-events:auto;cursor:pointer}
 .toast.war{border-left-color:var(--bad)}.toast.good{border-left-color:var(--ok)}.toast.nuke{border-color:#ffdf3a;border-left-color:#ff3a1a;background:rgba(60,10,6,.95);font-weight:700}
@@ -155,13 +158,14 @@ input[type=range]{accent-color:var(--acc)}
  #topbar{height:40px;gap:3px;padding:0 3px}
  #tb-country{min-width:0;padding:2px}#tb-country div{display:none}.flag.lg{width:34px;height:23px}
  #tb-time{min-width:62px}#tb-time b{font-size:11.5px}#tb-time small{font-size:10px}
- #tb-speed button{width:25px;height:27px;font-size:11px}
+ #tb-speed button{width:30px;height:32px;font-size:11px}
+ #legend{left:48px;bottom:auto;top:84px}
  #tb-res{position:fixed;left:0;right:0;top:40px;height:36px;background:rgba(10,20,32,.93);padding:3px 4px;z-index:4;border-bottom:1px solid #223b55;flex:none}
  .rchip{min-width:62px;padding:1px 4px}
  .ibtn{width:30px;height:28px}
  #leftbar{top:76px;width:42px;padding:4px 2px}#leftbar button{width:38px;height:40px;font-size:17px}#leftbar button span{display:none}
  #mini-wrap{display:none!important}
- #prov-panel{left:42px;right:0;top:auto;bottom:0;width:auto;max-height:46%;border-radius:10px 10px 0 0}
+ #prov-panel{left:42px;right:0;top:auto;bottom:0;width:auto;max-height:42%;border-radius:10px 10px 0 0}
  #unit-panel{left:42px;right:0;bottom:0;width:auto;min-width:0;border-radius:10px 10px 0 0}
  body.usel #prov-panel{display:none}
  #modal{width:100vw;height:100vh;max-height:none;border-radius:0}#modal.sm{width:96vw;height:auto;max-height:92vh;border-radius:8px}

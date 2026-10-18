@@ -195,7 +195,22 @@ function buildHUD() {
   $('mini-wrap').style.display = 'block';
   updateSpeedBtns(); updateModeBtns();
 }
-function updateModeBtns() { document.querySelectorAll('#mapmodes button[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === MV.mode)); }
+const LEGENDS = {
+  political: [['#5b8def', 'Цвет — государство'], ['rgba(255,255,255,.5)', 'Полосы — оккупированная провинция']],
+  terrain: Object.values(TERRAIN).map(t => [rgb2css(...t.col), t.n]),
+  relations: [['#2f7fd8', 'Вы'], ['#2faa6a', 'Союзник'], ['#6fae8a', 'Друг (>25)'], ['#a08a6a', 'Нейтрал'], ['#b5654a', 'Враждебен'], ['#c0392b', 'Война']],
+  bloc: [['#4a5360', 'Вне альянса'], ['#3a7bd5', 'Цвет — альянс']],
+  pop: [['grad:rgb(40,60,80),rgb(240,150,60)', 'Население: меньше → больше']],
+  power: [['grad:rgb(50,70,90),rgb(220,80,70)', 'Военная мощь: меньше → больше']],
+};
+for (const [k, c1] of [['fuel', '225,120,60'], ['comp', '170,190,210'], ['food', '230,195,80'], ['rare', '200,120,230'], ['supp', '210,170,110'], ['elec', '90,200,235']]) LEGENDS['res:' + k] = [[`grad:rgb(40,55,70),rgb(${c1})`, 'Добыча: 0 → 5 уровень']];
+function updateLegend() {
+  const el = $('legend'); const L = LEGENDS[MV.mode]; const name = (MODES.find(m => m[0] === MV.mode) || [0, 0, ''])[2];
+  if (!L || MV.mode === 'political') { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `<b>${name}</b>` + L.map(([c, t]) => c.startsWith('grad:') ? `<div class="grad" style="background:linear-gradient(90deg,${c.slice(5)})"></div><div class="note">${t}</div>` : `<div class="lg"><i style="background:${c}"></i>${t}</div>`).join('');
+}
+function updateModeBtns() { updateLegend(); document.querySelectorAll('#mapmodes button[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === MV.mode)); }
 
 function refreshHUD(force) {
   if (!G) return;

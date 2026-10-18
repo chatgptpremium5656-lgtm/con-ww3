@@ -2,7 +2,7 @@
 /* ===== Modal windows ===== */
 const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты', tutorial: '🎖 Добро пожаловать, командующий' };
 const TABS = { overview: [['country', 'Моя страна'], ['world', 'Страны мира'], ['wars', 'Войны'], ['victory', 'Победа']], army: [['units', 'Войска'], ['prod', 'Производство'], ['build', 'Строительство']], events: [['mine', 'Мои'], ['all', 'Мировые']] };
-function openModal(m) { UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
+function openModal(m) { hideTip(); UI.hoverTip = null; UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
 function closeModal() { UI.modal = null; $('modal-back').classList.add('hidden'); hideTip(); }
 $('modal-back').addEventListener('mousedown', e => { if (e.target.id === 'modal-back') closeModal(); });
 
