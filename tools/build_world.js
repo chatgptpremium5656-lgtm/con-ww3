@@ -315,12 +315,19 @@ const seas = [];
   }
   const totalW = wcs.reduce((a, l) => a + l.length, 0);
   console.log('water comps', wcs.length, totalW);
-  // use coastal weighting: more zones near coasts => reduce effective area of distance by transforming? keep equal-area
-  const targetArea = totalW / TARGET_SEAS;
+  // distance to land (chebyshev up to NEAR) for coastal band
+  const NEAR = +(process.env.NEAR || 9);
+  const near = new Uint8Array(N);
+  { let fr = []; for (let v = 0; v < N; v++) if (label[v] >= 0) fr.push(v);
+    const seen = new Uint8Array(N); for (const v of fr) seen[v] = 1;
+    for (let d = 0; d < NEAR; d++) { const nx = []; for (const v of fr) { const x = v % W, y = (v / W) | 0; for (const [dx, dy] of NB) { let nx2 = x + dx; const ny = y + dy; if (ny < 0 || ny >= H) continue; nx2 = (nx2 + W) % W; const n = ny * W + nx2; if (!seen[n]) { seen[n] = 1; near[n] = 1; nx.push(n); } } } fr = nx; } }
+  const COAST_A = +(process.env.COASTA || 2300), DEEP_A = +(process.env.DEEPA || 15000);
   for (const list of wcs) {
     if (list.length < 40) { continue; }
-    const k = Math.max(1, Math.round(list.length / targetArea));
-    const seeds = kmeansRegion(list, k, true);
+    const coast = list.filter(v => near[v]), deep = list.filter(v => !near[v]);
+    let seeds = [];
+    if (coast.length) seeds = seeds.concat(kmeansRegion(coast, Math.max(1, Math.round(coast.length / COAST_A)), true));
+    if (deep.length > 200) seeds = seeds.concat(kmeansRegion(deep, Math.max(1, Math.round(deep.length / DEEP_A)), true));
     partition(seeds, list, true);
     const base = seas.length;
     seeds.forEach((s, i) => seas.push({ id: P + base + i, cells: [], seed: s }));
@@ -693,47 +700,54 @@ for (const [a, b, c, d] of SEA_LINKS) { const s1 = regionAt(a, b, true), s2 = re
 for (const [a, b, c, d] of LAND_LINKS) { const s1 = regionAt(a, b, false), s2 = regionAt(c, d, false); if (s1 >= 0 && s2 >= 0 && s1 !== s2 && provs[s1].c === provs[s2].c) addAdj(s1, s2, 1); }
 
 // ---------- encode ----------
-function enc(pts) { // delta encode ints
-  const o = []; let px0 = 0, py0 = 0;
-  for (let i = 0; i < pts.length; i += 2) { o.push(pts[i] - px0, pts[i + 1] - py0); px0 = pts[i]; py0 = pts[i + 1]; }
-  return o;
+function pack(arcsIn) { // zigzag varints -> base64
+  const out = [];
+  const wv = n => { n = n >>> 0; while (n > 127) { out.push((n & 127) | 128); n >>>= 7; } out.push(n); };
+  const zz = n => ((n << 1) ^ (n >> 31)) >>> 0;
+  for (const a of arcsIn) {
+    wv(a.l + 1); wv(a.r + 1); wv(a.closed ? 1 : 0); wv(a.pts.length / 2);
+    let px0 = 0, py0 = 0;
+    for (let i = 0; i < a.pts.length; i += 2) { wv(zz(a.pts[i] - px0)); wv(zz(a.pts[i + 1] - py0)); px0 = a.pts[i]; py0 = a.pts[i + 1]; }
+  }
+  return Buffer.from(out).toString('base64');
 }
-let totalPts = 0;
-world.arcs = arcs.map(a => { totalPts += a.pts.length / 2; return [a.l, a.r, a.closed ? 1 : 0, enc(a.pts)]; });
-console.log('points', totalPts);
+world.ap = pack(arcs);
+let totalPts = arcs.reduce((n, a) => n + a.pts.length / 2, 0);
+console.log('points', totalPts, 'packed', world.ap.length);
+// adjacency derivable from arcs (to find extra manual links)
+const derived = new Set();
+for (const a of arcs) { if (a.l < 0 || a.r < 0 || a.l === a.r) continue; derived.add(Math.min(a.l, a.r) * 100000 + Math.max(a.l, a.r)); }
+const linksLand = [], linksSea = [];
+for (let a = 0; a < R; a++) for (const [b] of adj[a]) { if (b < a) continue; if (derived.has(a * 100000 + b)) continue; if (a >= P && b >= P) linksSea.push([a - P, b - P]); else if (a < P && b < P) linksLand.push([a, b]); else linksSea.push([a < P ? a : b, (a < P ? b : a) - P, 1]); }
+world.links = { land: linksLand, sea: linksSea };
+console.log('extra links', linksLand.length, linksSea.length);
 const rnd2 = x => Math.round(x * 10) / 10;
 world.countries = keys.map((k, ci) => {
   const pr = profiles[k] || {};
   const cp = capProv[k];
   return {
-    key: k, n: cNameRu(k), nameEn: cinfo[k].name, cap: cp ? cp.prov : (cprov[ci][0] ? cprov[ci][0].id : -1), capName: cp ? cp.name : '',
+    key: k, n: cNameRu(k), cap: cp ? cp.prov : (cprov[ci][0] ? cprov[ci][0].id : -1),
     pop: cinfo[k].pop, gdp: cinfo[k].gdp,
     gov: pr.gov || 'autocracy', mil: pr.mil || 2, tech: pr.tech || 2, nukes: pr.nukes || 0,
     oil: pr.oil ?? 1, ore: pr.ore ?? 1, rare: pr.rare ?? 0, food: pr.food ?? 2, ind: pr.ind ?? 1,
     bloc: pr.bloc || 'NONE', agg: pr.agg || 1, rivals: pr.rivals || [], flag: pr.flag || 'plain:#808080',
-    provs: cprov[ci].map(p => p.id)
+    _n: cprov[ci].length
   };
-}).filter(c => c.provs.length);
+}).filter(c => c._n);
 const cIdMap = {}; world.countries.forEach((c, i) => cIdMap[c.key] = i);
+world.countries.forEach(c => delete c._n);
 world.provs = provs.map(p => ({
   id: p.id, c: cIdMap[keys[p.c]], name: p.name, x: rnd2(p.cx), y: rnd2(p.cy), lx: rnd2(p.lx), ly: rnd2(p.ly), area: p.area, pop: p.pop,
-  terr: p.terr, res: p.res, vp: p.vp, city: p.cities[0] ? p.cities[0].pop : 0, bbox: p.bbox,
-  adj: [...adj[p.id].entries()].filter(([o, w]) => o < P).map(([o]) => o),
-  seas: [...adj[p.id].entries()].filter(([o, w]) => o >= P).map(([o]) => o - P),
+  terr: p.terr, res: p.res, vp: p.vp, city: p.cities[0] ? p.cities[0].pop : 0,
   rings: ringsFast(p.id)
 }));
-world.seas = seas.map((s, i) => ({
-  id: i, name: s.name, x: rnd2(s.cx), y: rnd2(s.cy), lx: rnd2(s.lx), ly: rnd2(s.ly), area: s.area, bbox: s.bbox,
-  adj: [...adj[P + i].entries()].filter(([o, w]) => o >= P).map(([o]) => o - P),
-  ports: [...adj[P + i].entries()].filter(([o, w]) => o < P).map(([o]) => o),
-  rings: ringsFast(P + i)
-}));
+world.seas = seas.map((s, i) => ({ id: i, name: s.name, x: rnd2(s.cx), y: rnd2(s.cy), lx: rnd2(s.lx), ly: rnd2(s.ly), area: s.area, rings: ringsFast(P + i) }));
 world.proj = { RES, Y_TOP, LAT_TOP };
+delete world.arcs;
 const out = 'const WORLD=' + JSON.stringify(world) + ';\n';
 fs.mkdirSync(path.join(__dirname, '..', 'src'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, '..', 'src', 'world.js'), out);
 console.log('world.js bytes', out.length, 'provs', world.provs.length, 'seas', world.seas.length, 'countries', world.countries.length);
 const noName = world.provs.filter(p => !p.name).length; if (noName) console.log('unnamed', noName);
-// stats
-const per = world.countries.map(c => [c.key, c.provs.length]).sort((a, b) => b[1] - a[1]).slice(0, 12);
+const per = world.countries.map(c => [c.key, world.provs.filter(p => p.c === cIdMap[c.key]).length]).sort((a, b) => b[1] - a[1]).slice(0, 12);
 console.log(per.map(a => a.join(':')).join(' '));

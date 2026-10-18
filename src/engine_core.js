@@ -208,7 +208,7 @@ function initCountry(c) {
   }
   // resources: ~12 days of income, computed after recalc (so do a first recalc)
   recalc(c);
-  for (const k of RES) c.res[k] = Math.max(60, (c.inc[k] || 0) * (k === 'cash' ? 14 : 12));
+  for (const k of RES) c.res[k] = Math.max(k === 'elec' || k === 'rare' ? 150 : 450, (c.inc[k] || 0) * (k === 'cash' ? 14 : 12));
   c.res.man = c.manCap * 0.85;
   c.res.cash += 300; c.res.comp += 120; c.res.elec += 40; c.res.rare += 10;
   // food scaling: need = pop^0.85 * 0.8, never starting in huge deficit

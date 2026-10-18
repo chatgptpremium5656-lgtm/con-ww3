@@ -5,11 +5,7 @@ const projY = lat => { const m = 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * la
 const projX = lon => (lon + 180) * WORLD.proj.RES;
 
 /* decode arcs and build paths */
-const ARC = WORLD.arcs.map(a => {
-  const d = a[3], n = d.length / 2, raw = new Float32Array(d.length); let x = 0, y = 0;
-  for (let i = 0; i < n; i++) { x += d[2 * i]; y += d[2 * i + 1]; raw[2 * i] = x; raw[2 * i + 1] = y; }
-  return { l: a[0], r: a[1], closed: !!a[2], p: chaikin(chaikin(raw, !!a[2]), !!a[2]) };
-});
+const ARC = WORLD.arcs.map(a => ({ l: a[0], r: a[1], closed: !!a[2], p: chaikin(chaikin(Float32Array.from(a[3]), !!a[2]), !!a[2]) }));
 function chaikin(p, closed) {
   const n = p.length / 2; if (n < 3) return p;
   const o = [];
@@ -52,7 +48,7 @@ const CLABEL = CTY.map((c, ci) => {
     const comp = []; const st = [s]; seen.add(s);
     while (st.length) { const v = st.pop(); comp.push(v); for (const a of PROV[v].adj) if (PROV[a].c === ci && !seen.has(a)) { seen.add(a); st.push(a); } }
     let area = 0; for (const v of comp) area += PROV[v].area;
-    if (!best || area > best.area) best = { comp, area };
+    if (!best || area > best.area || comp.includes(c.cap)) { if (!best || !best.hasCap) best = { comp, area, hasCap: comp.includes(c.cap) }; }
   }
   let sx = 0, sy = 0, a = 0, minx = 1e9, maxx = -1, miny = 1e9, maxy = -1;
   for (const v of best.comp) { const p = PROV[v]; sx += p.x * p.area; sy += p.y * p.area; a += p.area; minx = Math.min(minx, p.bbox[0]); maxx = Math.max(maxx, p.bbox[2]); miny = Math.min(miny, p.bbox[1]); maxy = Math.max(maxy, p.bbox[3]); }
@@ -317,7 +313,7 @@ function drawOverlay() {
   }
   // unit chips
   const groups = collectGroups(); MV.chips = [];
-  const scale = clamp(0.62 + z * 0.1, 0.72, 1.18);
+  const scale = clamp(0.34 + z * 0.27, 0.5, 1.18);
   const perLoc = new Map();
   const drawList = [];
   for (const [, g] of groups) {

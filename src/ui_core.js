@@ -245,6 +245,10 @@ function renderProvPanel(force) {
   h += `<div class="sec"><div class="grid2"><div class="kv"><span>Население</span><span>${fmtPop(pv.pop)}</span></div><div class="kv"><span>Рельеф</span><span>${TERRAIN[pr.terr].n} (×${TERRAIN[pr.terr].def})</span></div>`;
   h += `<div class="kv"><span>Повреждения</span><span>${Math.round(pv.dmg)}%</span></div><div class="kv"><span>Заражение</span><span>${Math.round(pv.fall * 100)}%</span></div></div>`;
   if (pv.cap) h += `<div class="note" style="margin-top:5px;color:#ff9a80">⚠ Захват: ${G.C[pv.cap.by].n} — ${Math.round(pv.cap.prog)}%</div>`;
+  if (G.bat.has(p) && G.hour - G.bat.get(p) <= 2) {
+    const sides = {}; for (const u of unitsAt(p)) { const d = UNITS[u.t]; if (d.dom === 'msl' || (u.st === 'base' && d.dom === 'air')) continue; const s = sides[u.o] = sides[u.o] || { n: 0, hp: 0 }; s.n++; s.hp += u.hp; }
+    h += `<div class="note" style="margin-top:6px;color:#ff9a80">⚔ Идёт бой: ${Object.keys(sides).map(o => `${esc(G.C[o].n)} — ${sides[o].n} юн. (${Math.round(sides[o].hp / sides[o].n)}%)`).join(' vs ')}</div>`;
+  }
   if (me || areAllied(pv.o, G.player)) {
     h += `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`;
     for (const k of RES) if (prod[k] > 0.4) h += `<span data-tip="${RES_INFO[k].n}: +${prod[k].toFixed(1)}/сут">${RES_INFO[k].i}${prod[k] >= 10 ? Math.round(prod[k]) : prod[k].toFixed(1)}</span>`;
@@ -325,6 +329,7 @@ function seaPanelHTML(s) {
 function renderUnitPanel(force) {
   const el = $('unit-panel');
   const ids = [...SEL.units].filter(id => G.U.has(id));
+  document.body.classList.toggle('usel', ids.length > 0);
   if (!ids.length) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   const us = ids.map(id => G.U.get(id));

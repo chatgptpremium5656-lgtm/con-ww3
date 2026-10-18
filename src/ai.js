@@ -165,7 +165,7 @@ function aiMilitary(C) {
   if (!enemies.length) { C.ai_s.front = null; return; }
   const my = unitsOf(C.id);
   const land = my.filter(u => UNITS[u.t].dom === 'land' && u.st === 'idle');
-  const grace = G.hour < 24 * 3;
+  const grace = G.hour < 24 * 5;
   aiLand(C, enemies, land, my, grace);
   if (grace) return;
   aiAir(C, enemies, my);

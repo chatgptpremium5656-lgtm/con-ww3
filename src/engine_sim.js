@@ -619,7 +619,7 @@ function captureTick() {
       for (const k in cnt) if (+k !== by && G.war[by * NC + (+k)]) contested = true;
       if (!contested) {
         if (!pv.cap || pv.cap.by !== by) pv.cap = { by, prog: 0 };
-        pv.cap.prog += (2.4 + 1.8 * bc) / (1 + 0.08 * pv.b.infra + 0.25 * pv.b.fort);
+        pv.cap.prog += (1.7 + 1.3 * bc) / (1 + 0.08 * pv.b.infra + 0.25 * pv.b.fort);
         if (pv.cap.prog >= 100) captureProv(p, by);
         continue;
       }
