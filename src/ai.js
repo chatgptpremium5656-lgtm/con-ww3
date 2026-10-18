@@ -121,7 +121,7 @@ function aiDiplomacy(C) {
   const diff = DIFF[G.opts.diff];
   // seek peace in AI-vs-AI wars
   for (const e of warsOf(C.id)) {
-    const E = G.C[e]; if (!E.ai) continue;
+    const E = G.C[e]; if (!E.ai) { if (aiPeaceEval(C.id, e).ok && R() < 0.5) news('peaceoffer', `🕊 ${C.n} готова обсудить мир с вами (Дипломатия → Предложить мир)`, C.cap, [C.id, e], 'p'); continue; }
     if (aiPeaceEval(e, C.id).ok && aiPeaceEval(C.id, e).ok) makePeace(C.id, e);
   }
   const wars = warsOf(C.id);

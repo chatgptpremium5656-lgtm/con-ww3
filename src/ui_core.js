@@ -136,6 +136,11 @@ function wireMap() {
   };
   MV.onDbl = (x, y) => { if (!G) return; const ch = chipAt(x, y); if (ch && ch.o === G.player) { const all = []; for (const c of MV.chips) if (c.g.o === G.player && c.g.dom === ch.dom) all.push(...c.g.ids); selectUnits(all, false); } };
   MV.onHover = (h, x, y) => {
+    MV.preview = null;
+    if (G && h && SEL.units.size) {
+      const loc = h.k === 'p' ? h.id : P + h.id;
+      for (const id of SEL.units) { const u = G.U.get(id); if (!u) continue; const d = UNITS[u.t].dom; if (d === 'land' && h.k === 'p' || d === 'sea') { if (d === 'sea' && h.k === 'p' && !isCoastal(loc)) break; const path = findPath(u, u.loc, loc); if (path && path.length) MV.preview = { from: u.loc, path, dom: d }; break; } }
+    }
     if (!G) { if (h && h.k === 'p') { showTip(`<b>${esc(CTY[PROV[h.id].c].n)}</b><br>${esc(PROV[h.id].name)}`, x + 8, y + 8); } else hideTip(); return; }
     if (h && h.k === 'p' && !UI.hoverTip) {
       const p = PROV[h.id], pv = G.pv[h.id], o = G.C[pv.o];

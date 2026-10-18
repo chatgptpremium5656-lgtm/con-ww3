@@ -64,7 +64,14 @@ const MV = {
 const hexCache = {};
 const rgbOf = h => hexCache[h] || (hexCache[h] = hex2rgb(h));
 const ocean = '#0e2740';
-const TPAT = {};
+const TPAT = {}, STRIPE = {};
+function stripePat(ctx, col) {
+  if (STRIPE[col]) return STRIPE[col];
+  const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d');
+  g.strokeStyle = col; g.lineWidth = 5; g.globalAlpha = .85;
+  g.beginPath(); g.moveTo(-4, 20); g.lineTo(20, -4); g.moveTo(-4, 12); g.lineTo(12, -4); g.moveTo(4, 20); g.lineTo(20, 4); g.stroke();
+  return STRIPE[col] = ctx.createPattern(c, 'repeat');
+}
 function makePatterns(ctx) {
   const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g); return ctx.createPattern(c, 'repeat'); };
   TPAT.mountain = mk(30, 24, g => { g.strokeStyle = 'rgba(40,25,10,.55)'; g.lineWidth = 1.6; g.lineJoin = 'round'; [[7, 9], [21, 9], [14, 20]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x - 5, y + 3); g.lineTo(x, y - 4); g.lineTo(x + 5, y + 3); g.stroke(); }); });
@@ -158,6 +165,15 @@ function drawBase() {
     const f = provFill(i);
     ctx.fillStyle = f; ctx.fill(PPATH[i], 'evenodd');
     ctx.strokeStyle = f; ctx.lineWidth = px * 0.9; ctx.stroke(PPATH[i]);
+  }
+  // occupied provinces: stripes in the colour of the original owner
+  if (G && MV.mode === 'political') {
+    for (let i = 0; i < P; i++) {
+      if (G.pv[i].o === PROV[i].c || !G.C[PROV[i].c].alive) continue;
+      const b = PROV[i].bbox; if (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1) continue;
+      const pt = stripePat(ctx, G.C[PROV[i].c].color); if (pt.setTransform) pt.setTransform(new DOMMatrix([0.6 / z, 0, 0, 0.6 / z, 0, 0]));
+      ctx.fillStyle = pt; ctx.globalAlpha = 0.55; ctx.fill(PPATH[i], 'evenodd'); ctx.globalAlpha = 1;
+    }
   }
   // terrain textures
   if (z >= 1.25 && (MV.mode === 'political' || MV.mode === 'relations' || MV.mode === 'bloc' || MV.mode === 'terrain')) {
@@ -310,6 +326,12 @@ function drawOverlay() {
       const e = pts[pts.length - 1]; const [ex, ey] = w2s(e[0], e[1]); ctx.setLineDash([]); ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, 7); ctx.fill(); ctx.setLineDash([6, 5]);
     }
     ctx.setLineDash([]);
+  }
+  if (MV.preview && SEL && SEL.units.size) {
+    ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 2; ctx.setLineDash([2, 6]); ctx.lineCap = 'round'; ctx.beginPath();
+    let [sx, sy] = w2s(lx(MV.preview.from), ly(MV.preview.from)); ctx.moveTo(sx, sy);
+    for (const l of MV.preview.path) { [sx, sy] = w2s(lx(l), ly(l)); ctx.lineTo(sx, sy); }
+    ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'butt';
   }
   // unit chips
   const groups = collectGroups(); MV.chips = [];

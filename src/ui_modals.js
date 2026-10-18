@@ -261,6 +261,6 @@ window.actModal = function (a, d, el, e) {
     case 'optsound': UI.sound = el.checked; break;
     case 'optlabels': MV.labels = el.checked; MV.dirty = true; break;
     case 'optfog': G.fogOff = !el.checked; updateVis(true); MV.dirty = true; break;
-    case 'newgame': if (confirm('Начать новую игру? Несохранённый прогресс будет потерян.')) { closeModal(); showStart(); } break;
+    case 'newgame': if (UI.newConfirm) { UI.newConfirm = false; closeModal(); showStart(); } else { UI.newConfirm = true; el.textContent = '⚠ Нажмите ещё раз для подтверждения'; setTimeout(() => { UI.newConfirm = false; }, 4000); } break;
   }
 };

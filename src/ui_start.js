@@ -16,7 +16,7 @@ function showStart() {
   MV.startHi = -1; MV.cam.z = minZoom() * 1.0001; clampCam(); MV.dirty = true;
   const order = CTY.map((c, i) => i).sort((a, b) => importance(CTY[b]) - importance(CTY[a]));
   UI.startOrder = order;
-  const hasAuto = !!localStorage.getItem('conww3_auto');
+  let hasAuto = false; try { hasAuto = !!localStorage.getItem('conww3_auto'); } catch (e) { }
   $('start').innerHTML = `
   <div class="stl">
     <p class="logo">FAN-MADE RECREATION</p>

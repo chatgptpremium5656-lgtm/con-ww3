@@ -163,6 +163,8 @@ function trade(c, res, qty, buy) {
 }
 
 /* serialization */
+function sparse(a) { const o = []; for (let i = 0; i < a.length; i++) if (a[i]) o.push(i, a[i]); return o; }
+function unsparse(s, T) { const a = new T(NC * NC); for (let i = 0; i < s.length; i += 2) a[s[i]] = s[i + 1]; return a; }
 function saveGame() {
   const g = G;
   const o = {
@@ -170,7 +172,7 @@ function saveGame() {
     C: g.C.map(c => ({ alive: c.alive, cap: c.cap, res: c.res, techs: c.techs, gen: c.gen, rs: c.rs, alliance: c.alliance, foodScale: c.foodScale, stats: c.stats, provs: c.provs, ai: c.ai, ai_s: c.ai_s, pwr: c.pwr })),
     pv: g.pv.map(p => ({ o: p.o, b: p.b, bq: p.bq, q: p.q, dmg: p.dmg, cap: p.cap, fall: p.fall, since: p.since, pop: p.pop })),
     U: Array.from(g.U.values()),
-    rel: Array.from(g.rel), war: Array.from(g.war), acc: Array.from(g.acc), warStart: Array.from(g.warStart), wlost: Array.from(g.wlost), truce: g.truce ? Array.from(g.truce) : null,
+    rel: sparse(g.rel), war: sparse(g.war), acc: sparse(g.acc), warStart: sparse(g.warStart), wlost: sparse(g.wlost), truce: g.truce ? sparse(g.truce) : null,
     al: g.al, news: g.news.slice(-80)
   };
   return JSON.stringify(o);
@@ -185,7 +187,7 @@ function loadGame(str) {
   for (const id of G.at) id.length = 0;
   G.U = new Map();
   for (const u of o.U) { G.U.set(u.id, u); if (u.st !== 'cargo' && u.st !== 'out' && u.st !== 'back') G.at[u.loc].push(u.id); }
-  G.rel = Int8Array.from(o.rel); G.war = Uint8Array.from(o.war); G.acc = Uint8Array.from(o.acc); G.warStart = Int32Array.from(o.warStart); G.wlost = Int16Array.from(o.wlost); G.truce = o.truce ? Int32Array.from(o.truce) : null;
+  G.rel = unsparse(o.rel, Int8Array); G.war = unsparse(o.war, Uint8Array); G.acc = unsparse(o.acc, Uint8Array); G.warStart = unsparse(o.warStart, Int32Array); G.wlost = unsparse(o.wlost, Int16Array); G.truce = o.truce ? unsparse(o.truce, Int32Array) : new Int32Array(NC * NC);
   G.al = o.al; G.news = o.news; G.newsId = o.news.length ? o.news[o.news.length - 1].id || 0 : 0;
   for (const c of G.C) { c.dirty = true; if (c.alive) { recalc(c); calcUse(c); } }
   G.totalVP = PROV.reduce((a, p) => a + p.vp, 0);

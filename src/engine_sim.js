@@ -214,6 +214,7 @@ function legAllowed(u, from, to) {
 }
 /* Dijkstra on the location graph for a unit. Returns array of locs (excluding start), or null */
 function findPath(u, from, to) {
+  if (to < 0 || to >= N || from < 0) return null;
   if (from === to) return [];
   const dom = UNITS[u.t].dom;
   const spd = ustat(u).spd;
@@ -618,7 +619,7 @@ function captureTick() {
       let contested = false;
       for (const k in cnt) if (+k !== by && G.war[by * NC + (+k)]) contested = true;
       if (!contested) {
-        if (!pv.cap || pv.cap.by !== by) pv.cap = { by, prog: 0 };
+        if (!pv.cap || pv.cap.by !== by) { pv.cap = { by, prog: 0 }; note(owner, 'attack', `⚠ ${G.C[by].n} штурмует ${PROV[p].name}!`, p); }
         pv.cap.prog += (1.7 + 1.3 * bc) / (1 + 0.08 * pv.b.infra + 0.25 * pv.b.fort);
         if (pv.cap.prog >= 100) captureProv(p, by);
         continue;
