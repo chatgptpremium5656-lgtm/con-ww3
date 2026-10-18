@@ -1,0 +1,10 @@
+const fs=require('fs');const path=require('path');
+const files=['src/world.js','src/data.js','src/engine_core.js','src/engine_sim.js','src/engine_dipl.js','src/ai.js'];
+let code=files.map(f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8')).join('\n');
+code=code.replace("if (!(recentNuke || losing || fanatic)) continue;","if (!(recentNuke || losing || fanatic)) continue; console.log('NUKE by',C.n,'hour',G.hour,'recent',recentNuke,'losing',losing,'fan',fanatic,'provs',C.provs.length,CTY[C.id].provs.length);");
+code+='\n;module.exports={get G(){return G},newGame,tick,cidx};';
+const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);
+const E=m.exports;E.newGame({playerKey:'POL',scenario:'eve',diff:'normal',seed:7});
+for(let h=0;h<14;h++)E.tick();
+const G=E.G; const prk=G.C[E.cidx['PRK']]; const pv=G.pv[prk.cap]; console.log('cap prov',prk.cap,pv.cap, G.C[pv.cap.by].n);
+console.log([...G.at[prk.cap]].map(id=>{const u=G.U.get(id);return u.t+':'+G.C[u.o].n+':'+u.st}).join(' | '));

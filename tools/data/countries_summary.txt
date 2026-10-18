@@ -1,0 +1,242 @@
+ZWE|Zimbabwe|Зимбабве|14645468|21440|Africa|Eastern Africa|29.9|-18.9|Polygon|Sovereign country|Zimbabwe
+ZMB|Zambia|Замбия|17861030|23309|Africa|Eastern Africa|26.4|-14.7|Polygon|Sovereign country|Zambia
+YEM|Yemen|Йемен|29161922|22581|Asia|Western Asia|45.9|15.3|MultiPolygon|Sovereign country|Yemen
+VNM|Vietnam|Вьетнам|96462106|261921|Asia|South-Eastern Asia|105.4|21.7|MultiPolygon|Sovereign country|Vietnam
+VEN|Venezuela|Венесуэла|28515829|482359|South America|South America|-64.6|7.2|MultiPolygon|Sovereign country|Venezuela
+VAT|Vatican|Ватикан|825|-99|Europe|Southern Europe|12.5|41.9|Polygon|Sovereign country|Vatican
+VUT|Vanuatu|Вануату|299882|934|Oceania|Melanesia|166.9|-15.4|MultiPolygon|Sovereign country|Vanuatu
+UZB|Uzbekistan|Узбекистан|33580650|57921|Asia|Central Asia|64.0|41.7|MultiPolygon|Sovereign country|Uzbekistan
+URY|Uruguay|Уругвай|3461734|56045|South America|South America|-56.0|-33.0|Polygon|Sovereign country|Uruguay
+FSM|Micronesia|Микронезия|113815|401|Oceania|Micronesia|158.2|6.9|MultiPolygon|Sovereign country|Federated States of Micronesia
+MHL|Marshall Is.|Маршалловы Острова|58791|221|Oceania|Micronesia|171.2|7.1|MultiPolygon|Sovereign country|Marshall Islands
+MNP|N. Mariana Is.|Северные Марианские острова|57216|1323|Oceania|Micronesia|145.7|15.2|MultiPolygon|Dependency|United States of America
+VIR|U.S. Virgin Is.|Американские Виргинские острова|106631|3855|North America|Caribbean|-64.8|17.7|MultiPolygon|Dependency|United States of America
+GUM|Guam|Гуам|167294|5920|Oceania|Micronesia|144.7|13.4|Polygon|Dependency|United States of America
+ASM|American Samoa|Американское Самоа|55312|636|Oceania|Polynesia|-170.7|-14.3|Polygon|Dependency|United States of America
+PRI|Puerto Rico|Пуэрто-Рико|3193694|104988|North America|Caribbean|-66.5|18.2|MultiPolygon|Dependency|United States of America
+USA|United States of America|США|328239523|21433226|North America|Northern America|-97.5|39.5|MultiPolygon|Country|United States of America
+SGS|S. Geo. and the Is.|Южная Георгия и Южные Сандвичевы острова|30|0|Seven seas (open ocean)|Seven seas (open ocean)|-31.1|-55.7|MultiPolygon|Dependency|United Kingdom
+IOT|Br. Indian Ocean Ter.|Британская территория в Индийском океане|3000|120|Seven seas (open ocean)|Seven seas (open ocean)|71.3|-6.2|Polygon|Disputed|United Kingdom
+SHN|Saint Helena|Остров Святой Елены|4534|31|Seven seas (open ocean)|Western Africa|-5.7|-16.0|MultiPolygon|Dependency|United Kingdom
+PCN|Pitcairn Is.|Острова Питкэрн|54|0|Oceania|Polynesia|-128.3|-24.4|Polygon|Dependency|United Kingdom
+AIA|Anguilla|Ангилья|14731|175|North America|Caribbean|-63.0|18.2|Polygon|Dependency|United Kingdom
+FLK|Falkland Is.|Фолклендские острова|3398|282|South America|South America|-58.7|-51.6|MultiPolygon|Disputed|United Kingdom
+CYM|Cayman Is.|острова Кайман|64948|5517|North America|Caribbean|-81.2|19.3|MultiPolygon|Dependency|United Kingdom
+BMU|Bermuda|Бермудские Острова|63918|7484|North America|Northern America|-64.8|32.3|Polygon|Dependency|United Kingdom
+VGB|British Virgin Is.|Британские Виргинские острова|30030|500|North America|Caribbean|-64.6|18.4|MultiPolygon|Dependency|United Kingdom
+TCA|Turks and Caicos Is.|Тёркс и Кайкос|38191|1197|North America|Caribbean|-71.8|21.8|MultiPolygon|Dependency|United Kingdom
+MSR|Montserrat|Монтсеррат|4649|44|North America|Caribbean|-62.2|16.7|Polygon|Dependency|United Kingdom
+JEY|Jersey|Джерси|107800|5080|Europe|Northern Europe|-2.1|49.2|Polygon|Country|United Kingdom
+GGY|Guernsey|Гернси|62792|3465|Europe|Northern Europe|-2.6|49.5|Polygon|Country|United Kingdom
+IMN|Isle of Man|остров Мэн|84584|7491|Europe|Northern Europe|-4.5|54.2|Polygon|Country|United Kingdom
+GBR|United Kingdom|Великобритания|66834405|2829108|Europe|Northern Europe|-2.1|54.4|MultiPolygon|Country|United Kingdom
+ARE|United Arab Emirates|Объединённые Арабские Эмираты|9770529|421142|Asia|Western Asia|54.5|23.5|MultiPolygon|Sovereign country|United Arab Emirates
+UKR|Ukraine|Украина|44385155|153781|Europe|Eastern Europe|32.1|49.7|MultiPolygon|Sovereign country|Ukraine
+UGA|Uganda|Уганда|44269594|35165|Africa|Eastern Africa|32.9|2.0|Polygon|Sovereign country|Uganda
+TKM|Turkmenistan|Туркмения|5942089|40761|Asia|Central Asia|58.7|39.9|MultiPolygon|Sovereign country|Turkmenistan
+TUR|Turkey|Турция|83429615|761425|Asia|Western Asia|34.5|39.3|MultiPolygon|Sovereign country|Turkey
+TUN|Tunisia|Тунис|11694719|38796|Africa|Northern Africa|9.0|33.7|MultiPolygon|Sovereign country|Tunisia
+TTO|Trinidad and Tobago|Тринидад и Тобаго|1394973|24269|North America|Caribbean|-60.9|11.0|MultiPolygon|Sovereign country|Trinidad and Tobago
+TON|Tonga|Тонга|104494|512|Oceania|Polynesia|-175.2|-21.2|MultiPolygon|Sovereign country|Tonga
+TGO|Togo|Того|8082366|5490|Africa|Western Africa|1.1|8.8|Polygon|Sovereign country|Togo
+TLS|Timor-Leste|Восточный Тимор|1293119|2017|Asia|South-Eastern Asia|125.9|-8.8|MultiPolygon|Sovereign country|East Timor
+THA|Thailand|Таиланд|69625582|543548|Asia|South-Eastern Asia|101.1|15.5|MultiPolygon|Sovereign country|Thailand
+TZA|Tanzania|Танзания|58005463|63177|Africa|Eastern Africa|35.0|-6.1|MultiPolygon|Sovereign country|United Republic of Tanzania
+TJK|Tajikistan|Таджикистан|9321018|8116|Asia|Central Asia|72.6|38.2|MultiPolygon|Sovereign country|Tajikistan
+TWN|Taiwan|Тайвань|23568378|1127000|Asia|Eastern Asia|120.9|23.7|MultiPolygon|Sovereign country|Taiwan
+SYR|Syria|Сирия|17070135|98830|Asia|Western Asia|38.3|35.0|Polygon|Sovereign country|Syria
+CHE|Switzerland|Швейцария|8574832|703082|Europe|Western Europe|7.5|46.7|Polygon|Sovereign country|Switzerland
+SWE|Sweden|Швеция|10285453|530883|Europe|Northern Europe|19.0|65.9|MultiPolygon|Sovereign country|Sweden
+SWZ|eSwatini|Эсватини|1148130|4471|Africa|Southern Africa|31.5|-26.5|Polygon|Sovereign country|eSwatini
+SUR|Suriname|Суринам|581363|3697|South America|South America|-55.9|4.1|Polygon|Sovereign country|Suriname
+SDS|S. Sudan|Южный Судан|11062113|11998|Africa|Eastern Africa|30.4|7.2|Polygon|Sovereign country|South Sudan
+SDN|Sudan|Судан|42813238|30513|Africa|Northern Africa|29.3|16.3|Polygon|Sovereign country|Sudan
+LKA|Sri Lanka|Шри-Ланка|21803000|84008|Asia|Southern Asia|80.7|7.6|MultiPolygon|Sovereign country|Sri Lanka
+ESP|Spain|Испания|47076781|1393490|Europe|Southern Europe|-3.5|40.1|MultiPolygon|Sovereign country|Spain
+KOR|South Korea|Республика Корея|51709098|1646739|Asia|Eastern Asia|128.1|36.4|MultiPolygon|Sovereign country|South Korea
+ZAF|South Africa|ЮАР|58558270|351431|Africa|Southern Africa|23.7|-29.7|MultiPolygon|Sovereign country|South Africa
+SOM|Somalia|Сомали|10192317.3|4719|Africa|Eastern Africa|45.2|3.6|Polygon|Sovereign country|Somalia
+SOL|Somaliland|Сомалиленд|5096159|17836|Africa|Eastern Africa|46.7|9.4|Polygon|Sovereign country|Somaliland
+SLB|Solomon Is.|Соломоновы Острова|669823|1589|Oceania|Melanesia|159.2|-8.0|MultiPolygon|Sovereign country|Solomon Islands
+SVK|Slovakia|Словакия|5454073|105079|Europe|Eastern Europe|19.0|48.7|Polygon|Sovereign country|Slovakia
+SVN|Slovenia|Словения|2087946|54174|Europe|Southern Europe|14.9|46.1|Polygon|Sovereign country|Slovenia
+SGP|Singapore|Сингапур|5703569|372062|Asia|South-Eastern Asia|103.8|1.4|Polygon|Sovereign country|Singapore
+SLE|Sierra Leone|Сьерра-Леоне|7813215|4121|Africa|Western Africa|-11.8|8.6|MultiPolygon|Sovereign country|Sierra Leone
+SYC|Seychelles|Сейшельские Острова|97625|1703|Seven seas (open ocean)|Eastern Africa|55.5|-4.7|Polygon|Sovereign country|Seychelles
+SRB|Serbia|Сербия|6944975|51475|Europe|Southern Europe|20.8|44.2|Polygon|Sovereign country|Republic of Serbia
+SEN|Senegal|Сенегал|16296364|23578|Africa|Western Africa|-14.8|15.1|Polygon|Sovereign country|Senegal
+SAU|Saudi Arabia|Саудовская Аравия|34268528|792966|Asia|Western Asia|44.7|23.8|MultiPolygon|Sovereign country|Saudi Arabia
+STP|São Tomé and Principe|Сан-Томе и Принсипи|215056|418|Africa|Middle Africa|7.0|1.0|MultiPolygon|Sovereign country|São Tomé and Principe
+SMR|San Marino|Сан-Марино|33860|1655|Europe|Southern Europe|12.4|43.9|Polygon|Sovereign country|San Marino
+WSM|Samoa|Самоа|197097|852|Oceania|Polynesia|-172.4|-13.6|MultiPolygon|Sovereign country|Samoa
+VCT|St. Vin. and Gren.|Сент-Винсент и Гренадины|110589|824|North America|Caribbean|-61.3|13.1|MultiPolygon|Sovereign country|Saint Vincent and the Grenadines
+LCA|Saint Lucia|Сент-Люсия|182790|2122|North America|Caribbean|-61.0|13.9|Polygon|Sovereign country|Saint Lucia
+KNA|St. Kitts and Nevis|Сент-Китс и Невис|52834|1053|North America|Caribbean|-62.8|17.3|MultiPolygon|Sovereign country|Saint Kitts and Nevis
+RWA|Rwanda|Руанда|12626950|10354|Africa|Eastern Africa|30.1|-1.9|Polygon|Sovereign country|Rwanda
+RUS|Russia|Россия|144373535|1699876|Europe|Eastern Europe|44.7|58.2|MultiPolygon|Sovereign country|Russia
+ROU|Romania|Румыния|19356544|250077|Europe|Eastern Europe|25.0|45.7|Polygon|Sovereign country|Romania
+QAT|Qatar|Катар|2832067|175837|Asia|Western Asia|51.1|25.2|Polygon|Sovereign country|Qatar
+PRT|Portugal|Португалия|10269417|238785|Europe|Southern Europe|-8.3|39.6|MultiPolygon|Sovereign country|Portugal
+POL|Poland|Польша|37970874|595858|Europe|Eastern Europe|19.5|52.0|Polygon|Sovereign country|Poland
+PHL|Philippines|Филиппины|108116615|376795|Asia|South-Eastern Asia|122.5|11.2|MultiPolygon|Sovereign country|Philippines
+PER|Peru|Перу|32510453|226848|South America|South America|-72.9|-13.0|Polygon|Sovereign country|Peru
+PRY|Paraguay|Парагвай|7044636|38145|South America|South America|-60.1|-21.7|Polygon|Sovereign country|Paraguay
+PNG|Papua New Guinea|Папуа — Новая Гвинея|8776109|24829|Oceania|Melanesia|143.9|-5.7|MultiPolygon|Sovereign country|Papua New Guinea
+PAN|Panama|Панама|4246439|66800|North America|Central America|-80.4|8.7|MultiPolygon|Sovereign country|Panama
+PLW|Palau|Палау|18008|268|Oceania|Micronesia|134.6|7.5|MultiPolygon|Sovereign country|Palau
+PAK|Pakistan|Пакистан|216565318|278221|Asia|Southern Asia|68.5|29.3|Polygon|Sovereign country|Pakistan
+OMN|Oman|Оман|4974986|76331|Asia|Western Asia|57.3|22.1|MultiPolygon|Sovereign country|Oman
+NOR|Norway|Норвегия|5347896|403336|Europe|Northern Europe|9.7|61.4|MultiPolygon|Sovereign country|Norway
+PRK|North Korea|КНДР|25666161|40000|Asia|Eastern Asia|126.4|39.9|MultiPolygon|Sovereign country|North Korea
+NGA|Nigeria|Нигерия|200963599|448120|Africa|Western Africa|7.5|9.4|MultiPolygon|Sovereign country|Nigeria
+NER|Niger|Нигер|23310715|12911|Africa|Western Africa|9.5|17.4|Polygon|Sovereign country|Niger
+NIC|Nicaragua|Никарагуа|6545502|12520|North America|Central America|-85.1|12.7|Polygon|Sovereign country|Nicaragua
+NZL|New Zealand|Новая Зеландия|4917000|206928|Oceania|Australia and New Zealand|172.8|-39.8|MultiPolygon|Country|New Zealand
+NIU|Niue|Ниуэ|1620|10|Oceania|Polynesia|-169.9|-19.0|Polygon|Dependency|New Zealand
+COK|Cook Is.|Острова Кука|17459|244|Oceania|Polynesia|-159.8|-21.2|Polygon|Dependency|New Zealand
+NLD|Netherlands|Нидерланды|17332850|907050|Europe|Western Europe|5.6|52.4|MultiPolygon|Country|Netherlands
+ABW|Aruba|Аруба|106314|3056|North America|Caribbean|-70.0|12.5|Polygon|Country|Netherlands
+CUW|Curaçao|Кюрасао|157538|3101|North America|Caribbean|-68.9|12.1|Polygon|Country|Netherlands
+NPL|Nepal|Непал|28608710|30641|Asia|Southern Asia|83.6|28.3|Polygon|Sovereign country|Nepal
+NRU|Nauru|Науру|12581|118|Oceania|Micronesia|166.9|-0.5|Polygon|Sovereign country|Nauru
+NAM|Namibia|Намибия|2494530|12366|Africa|Southern Africa|17.1|-20.6|Polygon|Sovereign country|Namibia
+MOZ|Mozambique|Мозамбик|30366036|15291|Africa|Eastern Africa|37.8|-13.9|Polygon|Sovereign country|Mozambique
+MAR|Morocco|Марокко|36471769|119700|Africa|Northern Africa|-7.2|31.7|Polygon|Sovereign country|Morocco
+SAH|W. Sahara|Западная Сахара|603253|907|Africa|Northern Africa|-12.6|24.0|Polygon|Indeterminate|Western Sahara
+MNE|Montenegro|Черногория|622137|5542|Europe|Southern Europe|19.1|42.8|Polygon|Sovereign country|Montenegro
+MNG|Mongolia|Монголия|3225167|13996|Asia|Eastern Asia|104.2|46.0|Polygon|Sovereign country|Mongolia
+MDA|Moldova|Молдавия|2657637|11968|Europe|Eastern Europe|28.5|47.4|Polygon|Sovereign country|Moldova
+MCO|Monaco|Монако|38964|7188|Europe|Western Europe|7.4|43.7|Polygon|Sovereign country|Monaco
+MEX|Mexico|Мексика|127575529|1268870|North America|Central America|-102.3|23.9|MultiPolygon|Sovereign country|Mexico
+MUS|Mauritius|Маврикий|1265711|14048|Seven seas (open ocean)|Eastern Africa|57.6|-20.3|Polygon|Sovereign country|Mauritius
+MRT|Mauritania|Мавритания|4525696|7600|Africa|Western Africa|-9.7|19.6|MultiPolygon|Sovereign country|Mauritania
+MLT|Malta|Мальта|502653|14989|Europe|Southern Europe|14.4|35.9|MultiPolygon|Sovereign country|Malta
+MLI|Mali|Мали|19658031|17279|Africa|Western Africa|-2.0|18.7|Polygon|Sovereign country|Mali
+MDV|Maldives|Мальдивы|530953|5642|Seven seas (open ocean)|Southern Asia|73.5|4.2|MultiPolygon|Sovereign country|Maldives
+MYS|Malaysia|Малайзия|31949777|364681|Asia|South-Eastern Asia|113.8|2.5|MultiPolygon|Sovereign country|Malaysia
+MWI|Malawi|Малави|18628747|7666|Africa|Eastern Africa|33.6|-13.4|MultiPolygon|Sovereign country|Malawi
+MDG|Madagascar|Мадагаскар|26969307|14114|Africa|Eastern Africa|46.7|-18.6|MultiPolygon|Sovereign country|Madagascar
+MKD|North Macedonia|Северная Македония|2083459|12547|Europe|Southern Europe|21.6|41.6|Polygon|Sovereign country|North Macedonia
+LUX|Luxembourg|Люксембург|619896|71104|Europe|Western Europe|6.1|49.7|Polygon|Sovereign country|Luxembourg
+LTU|Lithuania|Литва|2786844|54627|Europe|Northern Europe|24.1|55.1|MultiPolygon|Sovereign country|Lithuania
+LIE|Liechtenstein|Лихтенштейн|38019|6876|Europe|Western Europe|9.6|47.1|Polygon|Sovereign country|Liechtenstein
+LBY|Libya|Ливия|6777452|52091|Africa|Northern Africa|18.0|26.6|Polygon|Sovereign country|Libya
+LBR|Liberia|Либерия|4937374|3070|Africa|Western Africa|-9.5|6.4|Polygon|Sovereign country|Liberia
+LSO|Lesotho|Лесото|2125268|2376|Africa|Southern Africa|28.2|-29.5|Polygon|Sovereign country|Lesotho
+LBN|Lebanon|Ливан|6855713|51991|Asia|Western Asia|36.0|34.1|Polygon|Sovereign country|Lebanon
+LVA|Latvia|Латвия|1912789|34102|Europe|Northern Europe|25.5|57.1|Polygon|Sovereign country|Latvia
+LAO|Laos|Лаос|7169455|18173|Asia|South-Eastern Asia|102.5|19.4|Polygon|Sovereign country|Laos
+KGZ|Kyrgyzstan|Киргизия|6456900|8454|Asia|Central Asia|74.5|41.7|Polygon|Sovereign country|Kyrgyzstan
+KWT|Kuwait|Кувейт|4207083|134628|Asia|Western Asia|47.3|29.4|MultiPolygon|Sovereign country|Kuwait
+KOS|Kosovo|Республика Косово|1794248|7926|Europe|Southern Europe|20.9|42.6|Polygon|Disputed|Kosovo
+KIR|Kiribati|Кирибати|117606|194|Oceania|Micronesia|-157.4|1.8|MultiPolygon|Sovereign country|Kiribati
+KEN|Kenya|Кения|52573973|95503|Africa|Eastern Africa|37.9|0.5|MultiPolygon|Sovereign country|Kenya
+KAZ|Kazakhstan|Казахстан|18513930|181665|Asia|Central Asia|68.7|49.1|MultiPolygon|Sovereignty|Kazakhstan
+JOR|Jordan|Иордания|10101694|44502|Asia|Western Asia|36.4|30.8|Polygon|Sovereign country|Jordan
+JPN|Japan|Япония|126264931|5081769|Asia|Eastern Asia|138.4|36.1|MultiPolygon|Sovereign country|Japan
+JAM|Jamaica|Ямайка|2948279|16458|North America|Caribbean|-77.3|18.1|Polygon|Sovereign country|Jamaica
+ITA|Italy|Италия|60297396|2003576|Europe|Southern Europe|11.1|44.7|MultiPolygon|Sovereign country|Italy
+ISR|Israel|Израиль|9053300|394652|Asia|Western Asia|34.8|30.9|Polygon|Disputed|Israel
+PSX|Palestine|Палестина|4685306|16276|Asia|Western Asia|35.3|32.0|MultiPolygon|Indeterminate|Israel
+IRL|Ireland|Ирландия|4941444|388698|Europe|Northern Europe|-7.8|53.1|MultiPolygon|Sovereign country|Ireland
+IRQ|Iraq|Ирак|39309783|234094|Asia|Western Asia|43.3|33.1|Polygon|Sovereign country|Iraq
+IRN|Iran|Иран|82913906|453996|Asia|Southern Asia|54.9|32.2|MultiPolygon|Sovereign country|Iran
+IDN|Indonesia|Индонезия|270625568|1119190|Asia|South-Eastern Asia|101.9|-1.0|MultiPolygon|Sovereign country|Indonesia
+IND|India|Индия|1366417754|2868929|Asia|Southern Asia|79.4|22.7|MultiPolygon|Sovereign country|India
+ISL|Iceland|Исландия|361313|24188|Europe|Northern Europe|-18.7|64.8|Polygon|Sovereign country|Iceland
+HUN|Hungary|Венгрия|9769949|163469|Europe|Eastern Europe|19.4|47.1|Polygon|Sovereign country|Hungary
+HND|Honduras|Гондурас|9746117|25095|North America|Central America|-86.9|14.8|MultiPolygon|Sovereign country|Honduras
+HTI|Haiti|Республика Гаити|11263077|14332|North America|Caribbean|-72.2|19.3|MultiPolygon|Sovereign country|Haiti
+GUY|Guyana|Гайана|782766|5173|South America|South America|-58.9|5.1|Polygon|Sovereign country|Guyana
+GNB|Guinea-Bissau|Гвинея-Бисау|1920922|1339|Africa|Western Africa|-14.5|12.2|MultiPolygon|Sovereign country|Guinea-Bissau
+GIN|Guinea|Гвинея|12771246|12296|Africa|Western Africa|-10.0|10.6|Polygon|Sovereign country|Guinea
+GTM|Guatemala|Гватемала|16604026|76710|North America|Central America|-90.5|15.0|Polygon|Sovereign country|Guatemala
+GRD|Grenada|Гренада|112003|1210|North America|Caribbean|-61.7|12.1|Polygon|Sovereign country|Grenada
+GRC|Greece|Греция|10716322|209852|Europe|Southern Europe|21.7|39.5|MultiPolygon|Sovereign country|Greece
+GHA|Ghana|Гана|30417856|66983|Africa|Western Africa|-1.0|7.7|Polygon|Sovereign country|Ghana
+DEU|Germany|Германия|83132799|3861123|Europe|Western Europe|9.7|51.0|MultiPolygon|Sovereign country|Germany
+GEO|Georgia|Грузия|3720382|17477|Asia|Western Asia|43.7|41.9|Polygon|Sovereign country|Georgia
+GMB|Gambia|Гамбия|2347706|1826|Africa|Western Africa|-15.0|13.6|Polygon|Sovereign country|Gambia
+GAB|Gabon|Габон|2172579|16874|Africa|Middle Africa|11.8|-0.4|Polygon|Sovereign country|Gabon
+FRA|France|Франция|67059887|2715518|Europe|Western Europe|2.6|46.7|MultiPolygon|Country|France
+SPM|St. Pierre and Miquelon|Сен-Пьер и Микелон|5997|215|North America|Northern America|-56.3|47.0|MultiPolygon|Dependency|France
+WLF|Wallis and Futuna Is.|Уоллис и Футуна|11558|60|Oceania|Polynesia|-178.1|-14.3|MultiPolygon|Dependency|France
+MAF|St-Martin|Сен-Мартен|38002|562|North America|Caribbean|-63.0|18.1|Polygon|Dependency|France
+BLM|St-Barthélemy|Сен-Бартелеми|9961|255|North America|Caribbean|-62.8|17.9|Polygon|Dependency|France
+PYF|Fr. Polynesia|Французская Полинезия|279287|5490|Oceania|Polynesia|-149.5|-17.6|MultiPolygon|Dependency|France
+NCL|New Caledonia|Новая Каледония|287800|10770|Oceania|Melanesia|165.1|-21.1|MultiPolygon|Dependency|France
+ATF|Fr. S. Antarctic Lands|Французские Южные и Антарктические территории|140|16|Seven seas (open ocean)|Seven seas (open ocean)|69.1|-49.3|MultiPolygon|Dependency|France
+ALD|Åland|Аландские острова|29884|1563|Europe|Northern Europe|19.9|60.2|MultiPolygon|Country|Finland
+FIN|Finland|Финляндия|5520314|269296|Europe|Northern Europe|27.3|63.3|MultiPolygon|Country|Finland
+FJI|Fiji|Фиджи|889953|5496|Oceania|Melanesia|178.0|-17.8|MultiPolygon|Sovereign country|Fiji
+ETH|Ethiopia|Эфиопия|112078730|95912|Africa|Eastern Africa|39.1|8.0|Polygon|Sovereign country|Ethiopia
+EST|Estonia|Эстония|1326590|31471|Europe|Northern Europe|25.9|58.7|MultiPolygon|Sovereign country|Estonia
+ERI|Eritrea|Эритрея|6081196|2065|Africa|Eastern Africa|38.3|15.8|MultiPolygon|Sovereign country|Eritrea
+GNQ|Eq. Guinea|Экваториальная Гвинея|1355986|11026|Africa|Middle Africa|9.0|2.3|MultiPolygon|Sovereign country|Equatorial Guinea
+SLV|El Salvador|Сальвадор|6453553|27022|North America|Central America|-88.9|13.7|Polygon|Sovereign country|El Salvador
+EGY|Egypt|Египет|100388073|303092|Africa|Northern Africa|29.4|26.2|Polygon|Sovereign country|Egypt
+ECU|Ecuador|Эквадор|17373662|107435|South America|South America|-78.2|-1.3|MultiPolygon|Sovereign country|Ecuador
+DOM|Dominican Rep.|Доминиканская Республика|10738958|88941|North America|Caribbean|-70.7|19.1|Polygon|Sovereign country|Dominican Republic
+DMA|Dominica|Доминика|71808|582|North America|Caribbean|-61.3|15.5|Polygon|Sovereign country|Dominica
+DJI|Djibouti|Джибути|973560|3324|Africa|Eastern Africa|42.5|12.0|Polygon|Sovereign country|Djibouti
+GRL|Greenland|Гренландия|56225|3051|North America|Northern America|-39.3|74.3|MultiPolygon|Country|Denmark
+FRO|Faeroe Is.|Фарерские острова|48678|3116|Europe|Northern Europe|-7.1|62.2|MultiPolygon|Dependency|Denmark
+DNK|Denmark|Дания|5818553|350104|Europe|Northern Europe|9.0|56.0|MultiPolygon|Country|Denmark
+CZE|Czechia|Чехия|10669709|250680|Europe|Eastern Europe|15.4|49.9|Polygon|Sovereign country|Czechia
+CYN|N. Cyprus|Турецкая Республика Северного Кипра|326000|3600|Asia|Western Asia|33.7|35.2|Polygon|Sovereign country|Northern Cyprus
+CYP|Cyprus|Кипр|1198575|24948|Asia|Western Asia|33.1|34.9|Polygon|Sovereign country|Cyprus
+CUB|Cuba|Куба|11333483|100023|North America|Caribbean|-78.0|21.3|MultiPolygon|Sovereignty|Cuba
+HRV|Croatia|Хорватия|4067500|60752|Europe|Southern Europe|16.4|45.8|MultiPolygon|Sovereign country|Croatia
+CIV|Côte d'Ivoire|Кот-д’Ивуар|25716544|58539|Africa|Western Africa|-5.6|7.5|MultiPolygon|Sovereign country|Ivory Coast
+CRI|Costa Rica|Коста-Рика|5047561|61801|North America|Central America|-84.1|10.1|Polygon|Sovereign country|Costa Rica
+COD|Dem. Rep. Congo|Демократическая Республика Конго|86790567|50400|Africa|Middle Africa|23.5|-1.9|Polygon|Sovereign country|Democratic Republic of the Congo
+COG|Congo|Республика Конго|5380508|12267|Africa|Middle Africa|15.9|0.1|Polygon|Sovereign country|Republic of the Congo
+COM|Comoros|Коморы|850886|1165|Africa|Eastern Africa|43.3|-11.7|MultiPolygon|Sovereign country|Comoros
+COL|Colombia|Колумбия|50339443|323615|South America|South America|-73.2|3.4|MultiPolygon|Sovereign country|Colombia
+CHN|China|Китайская Народная Республика|1397715000|14342903|Asia|Eastern Asia|106.3|32.5|MultiPolygon|Country|China
+MAC|Macao|Макао|640445|53859|Asia|Eastern Asia|113.6|22.1|Polygon|Country|China
+HKG|Hong Kong|Гонконг|7507400|365711|Asia|Eastern Asia|114.1|22.4|MultiPolygon|Country|China
+CHL|Chile|Чили|18952038|282318|South America|South America|-72.3|-38.2|MultiPolygon|Sovereign country|Chile
+TCD|Chad|Чад|15946876|11314|Africa|Middle Africa|18.6|15.1|Polygon|Sovereign country|Chad
+CAF|Central African Rep.|Центральноафриканская Республика|4745185|2220|Africa|Middle Africa|20.9|7.0|Polygon|Sovereign country|Central African Republic
+CPV|Cabo Verde|Кабо-Верде|549935|1981|Africa|Western Africa|-23.6|15.1|MultiPolygon|Sovereign country|Cabo Verde
+CAN|Canada|Канада|37589262|1736425|North America|Northern America|-101.9|60.3|MultiPolygon|Sovereign country|Canada
+CMR|Cameroon|Камерун|25876380|39007|Africa|Middle Africa|12.5|4.6|Polygon|Sovereign country|Cameroon
+KHM|Cambodia|Камбоджа|16486542|27089|Asia|South-Eastern Asia|104.5|12.6|MultiPolygon|Sovereign country|Cambodia
+MMR|Myanmar|Мьянма|54045420|76085|Asia|South-Eastern Asia|95.8|21.6|MultiPolygon|Sovereign country|Myanmar
+BDI|Burundi|Бурунди|11530580|3012|Africa|Eastern Africa|29.9|-3.3|Polygon|Sovereign country|Burundi
+BFA|Burkina Faso|Буркина-Фасо|20321378|15990|Africa|Western Africa|-1.4|12.7|Polygon|Sovereign country|Burkina Faso
+BGR|Bulgaria|Болгария|6975761|68558|Europe|Eastern Europe|25.2|42.5|Polygon|Sovereign country|Bulgaria
+BRN|Brunei|Бруней|433285|13469|Asia|South-Eastern Asia|114.6|4.4|MultiPolygon|Sovereign country|Brunei
+BRA|Brazil|Бразилия|211049527|1839758|South America|South America|-49.6|-12.1|MultiPolygon|Sovereign country|Brazil
+BWA|Botswana|Ботсвана|2303697|18340|Africa|Southern Africa|24.2|-22.1|Polygon|Sovereign country|Botswana
+BIH|Bosnia and Herz.|Босния и Герцеговина|3301000|20164|Europe|Southern Europe|18.1|44.1|Polygon|Sovereign country|Bosnia and Herzegovina
+BOL|Bolivia|Боливия|11513100|40895|South America|South America|-64.6|-16.7|Polygon|Sovereign country|Bolivia
+BTN|Bhutan|Бутан|763092|2530|Asia|Southern Asia|90.0|27.5|Polygon|Sovereign country|Bhutan
+BEN|Benin|Бенин|11801151|14390|Africa|Western Africa|2.4|10.3|Polygon|Sovereign country|Benin
+BLZ|Belize|Белиз|390353|1879|North America|Central America|-88.7|17.2|MultiPolygon|Sovereign country|Belize
+BEL|Belgium|Бельгия|11484055|533097|Europe|Western Europe|4.8|50.8|Polygon|Sovereign country|Belgium
+BLR|Belarus|Белоруссия|9466856|63080|Europe|Eastern Europe|28.4|53.8|Polygon|Sovereign country|Belarus
+BRB|Barbados|Барбадос|287025|5209|North America|Caribbean|-59.6|13.2|Polygon|Sovereign country|Barbados
+BGD|Bangladesh|Бангладеш|163046161|302571|Asia|Southern Asia|89.7|24.2|MultiPolygon|Sovereign country|Bangladesh
+BHR|Bahrain|Бахрейн|1641172|38574|Asia|Western Asia|50.6|26.1|Polygon|Sovereign country|Bahrain
+BHS|Bahamas|Багамские Острова|389482|13578|North America|Caribbean|-77.1|26.4|MultiPolygon|Sovereign country|The Bahamas
+AZE|Azerbaijan|Азербайджан|10023318|48047|Asia|Western Asia|47.2|40.4|MultiPolygon|Sovereign country|Azerbaijan
+AUT|Austria|Австрия|8877067|445075|Europe|Western Europe|14.1|47.5|Polygon|Sovereign country|Austria
+AUS|Australia|Австралия|25364307|1396567|Oceania|Australia and New Zealand|134.0|-24.1|MultiPolygon|Country|Australia
+IOA|Indian Ocean Ter.|Австралийские территории в Индийском океане|2387|35|Asia|Seven seas (open ocean)|105.7|-10.5|MultiPolygon|Dependency|Australia
+HMD|Heard I. and McDonald Is.|Остров Херд и острова Макдональд|0|0|Seven seas (open ocean)|Seven seas (open ocean)|73.5|-53.1|Polygon|Dependency|Australia
+NFK|Norfolk Island|Норфолк|2169|32|Oceania|Australia and New Zealand|168.0|-29.0|Polygon|Dependency|Australia
+ATC|Ashmore and Cartier Is.|Острова Ашмор и Картье|0|0|Oceania|Australia and New Zealand|123.6|-12.4|Polygon|Dependency|Australia
+ARM|Armenia|Армения|2957731|13672|Asia|Western Asia|44.8|40.5|MultiPolygon|Sovereign country|Armenia
+ARG|Argentina|Аргентина|44938712|445445|South America|South America|-64.2|-33.5|MultiPolygon|Sovereign country|Argentina
+ATG|Antigua and Barb.|Антигуа и Барбуда|97118|1661|North America|Caribbean|-61.8|17.4|MultiPolygon|Sovereign country|Antigua and Barbuda
+AGO|Angola|Ангола|31825295|88815|Africa|Middle Africa|18.0|-12.2|MultiPolygon|Sovereign country|Angola
+AND|Andorra|Андорра|77142|3154|Europe|Southern Europe|1.5|42.5|Polygon|Sovereign country|Andorra
+DZA|Algeria|Алжир|43053054|171091|Africa|Northern Africa|2.8|27.4|Polygon|Sovereign country|Algeria
+ALB|Albania|Албания|2854191|15279|Europe|Southern Europe|20.1|40.7|Polygon|Sovereign country|Albania
+AFG|Afghanistan|Афганистан|38041754|19291|Asia|Southern Asia|66.5|34.2|Polygon|Sovereign country|Afghanistan
+KAS|Siachen Glacier|Сиачен|6000|15|Asia|Southern Asia|77.1|35.3|Polygon|Indeterminate|Kashmir
+ATA|Antarctica|Антарктида|4490|898|Antarctica|Antarctica|35.9|-79.8|MultiPolygon|Indeterminate|Antarctica
+SXM|Sint Maarten|Синт-Мартен|40733|1185|North America|Caribbean|-63.1|18.0|Polygon|Country|Netherlands
+TUV|Tuvalu|Тувалу|11646|47|Oceania|Polynesia|179.2|-8.5|Polygon|Sovereign country|Tuvalu
