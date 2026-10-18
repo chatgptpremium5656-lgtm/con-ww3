@@ -25,6 +25,7 @@ const isCoastal = p => PROV[p].seas.length > 0;
 const cidx = {}; CTY.forEach((c, i) => cidx[c.key] = i);
 
 let G = null;
+let SHELL_N = 0;
 
 /* seeded rng (mulberry32) */
 function makeRng(seed) { let a = seed >>> 0; const f = function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; f.get = () => a; f.set = v => { a = v; }; return f; }
@@ -86,7 +87,7 @@ function newGameShell(opts) {
     C: [], pv: [], U: new Map(), nextU: 1, at: Array.from({ length: N }, () => []),
     rel: new Int8Array(NC * NC), war: new Uint8Array(NC * NC), acc: new Uint8Array(NC * NC), warStart: new Int32Array(NC * NC),
     al: [], news: [], fx: [], market: { m: { food: 1, supp: 1, fuel: 1, comp: 1, elec: 1, rare: 1 } },
-    player: -1, over: null, tension: 1, stats: { battles: 0, nukes: 0 }, vis: new Uint8Array(N), visHour: -99, totalVP: 0, wlost: new Int16Array(NC * NC), bat: new Map(), truce: new Int32Array(NC * NC)
+    player: -1, over: null, tension: 1, stats: { battles: 0, nukes: 0 }, vis: new Uint8Array(N), visHour: -99, totalVP: 0, wlost: new Int16Array(NC * NC), ownVer: (++SHELL_N) * 100000, bat: new Map(), truce: new Int32Array(NC * NC)
   };
   G.opts.seed = seed;
   const sc0 = SCENARIOS[G.opts.scenario] || SCENARIOS.eve;

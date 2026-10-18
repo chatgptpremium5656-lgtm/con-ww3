@@ -68,6 +68,15 @@ const MV = {
 const hexCache = {};
 const rgbOf = h => hexCache[h] || (hexCache[h] = hex2rgb(h));
 const ocean = '#0e2740';
+const TPAT = {};
+function makePatterns(ctx) {
+  const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g); return ctx.createPattern(c, 'repeat'); };
+  TPAT.mountain = mk(30, 24, g => { g.strokeStyle = 'rgba(40,25,10,.55)'; g.lineWidth = 1.6; g.lineJoin = 'round'; [[7, 9], [21, 9], [14, 20]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x - 5, y + 3); g.lineTo(x, y - 4); g.lineTo(x + 5, y + 3); g.stroke(); }); });
+  TPAT.forest = mk(22, 22, g => { g.fillStyle = 'rgba(10,50,20,.5)'; [[5, 6], [16, 5], [11, 16], [3, 17], [20, 18]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.3, 0, 7); g.fill(); }); });
+  TPAT.jungle = mk(16, 16, g => { g.fillStyle = 'rgba(0,45,15,.55)'; [[4, 4], [12, 6], [8, 12], [2, 13], [14, 14]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); }); });
+  TPAT.desert = mk(24, 24, g => { g.fillStyle = 'rgba(120,80,20,.38)'; [[4, 5], [17, 9], [10, 19], [21, 21], [2, 14]].forEach(([x, y]) => { g.fillRect(x, y, 1.6, 1.6); }); });
+  TPAT.arctic = mk(20, 20, g => { g.fillStyle = 'rgba(255,255,255,.55)'; [[3, 4], [12, 10], [7, 16], [17, 17]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 1.4, 0, 7); g.fill(); }); });
+}
 
 function minZoom() { return Math.max(MV.W / WW, MV.H / WH); }
 function clampCam() {
@@ -127,8 +136,8 @@ function resize() {
   clampCam(); MV.dirty = true;
 }
 
-function drawMap() {
-  const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr;
+function drawBase() {
+  const ctx = MV.bctx, z = MV.cam.z, dpr = MV.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = ocean; ctx.fillRect(0, 0, MV.W * dpr, MV.H * dpr);
   ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (MV.W / 2 - MV.cam.cx * z), dpr * (MV.H / 2 - MV.cam.cy * z));
@@ -142,6 +151,9 @@ function drawMap() {
   ctx.strokeStyle = 'rgba(120,170,220,.14)'; ctx.beginPath(); const ey = projY(0); ctx.moveTo(0, ey); ctx.lineTo(WW, ey); ctx.stroke();
   // sea zone borders
   ctx.strokeStyle = 'rgba(140,190,240,.16)'; ctx.lineWidth = px * 0.8; ctx.setLineDash([px * 4, px * 4]); ctx.stroke(BORDER.sea); ctx.setLineDash([]);
+  // coastal glow
+  ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(70,140,215,.09)'; ctx.lineWidth = px * 18; ctx.stroke(BORDER.coast);
+  ctx.strokeStyle = 'rgba(90,165,235,.12)'; ctx.lineWidth = px * 8; ctx.stroke(BORDER.coast);
   // land fills
   const vx0 = MV.cam.cx - MV.W / 2 / z, vx1 = MV.cam.cx + MV.W / 2 / z, vy0 = MV.cam.cy - MV.H / 2 / z, vy1 = MV.cam.cy + MV.H / 2 / z;
   ctx.lineJoin = 'round';
@@ -151,6 +163,13 @@ function drawMap() {
     ctx.fillStyle = f; ctx.fill(PPATH[i], 'evenodd');
     ctx.strokeStyle = f; ctx.lineWidth = px * 0.9; ctx.stroke(PPATH[i]);
   }
+  // terrain textures
+  if (z >= 1.25 && (MV.mode === 'political' || MV.mode === 'relations' || MV.mode === 'bloc' || MV.mode === 'terrain')) {
+    if (!TPAT.mountain) makePatterns(ctx);
+    const sc = 0.5 / z;
+    for (const t of ['mountain', 'forest', 'jungle', 'desert', 'arctic']) { const pt = TPAT[t]; if (pt.setTransform) pt.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0])); ctx.fillStyle = pt; ctx.globalAlpha = t === 'arctic' ? 0.5 : 0.8; ctx.fill(TERRPATH[t], 'evenodd'); }
+    ctx.globalAlpha = 1;
+  }
   // terrain tint
   if (MV.mode === 'political' || MV.mode === 'relations' || MV.mode === 'bloc') {
     for (const t in TERRAIN) { const c = TERRAIN[t].col; ctx.fillStyle = rgb2css(c[0], c[1], c[2], t === 'plains' ? 0 : 0.16); if (t !== 'plains') ctx.fill(TERRPATH[t], 'evenodd'); }
@@ -159,7 +178,10 @@ function drawMap() {
   ctx.strokeStyle = 'rgba(10,20,30,.45)'; ctx.lineWidth = px * 0.7; ctx.stroke(BORDER.prov);
   ctx.strokeStyle = 'rgba(8,14,22,.92)'; ctx.lineWidth = px * 1.45; ctx.stroke(BORDER.cty);
   ctx.strokeStyle = 'rgba(160,205,255,.55)'; ctx.lineWidth = px * 1.1; ctx.stroke(BORDER.coast);
-  // hover / selection
+}
+function drawHL() {
+  const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr, px = 1 / z;
+  ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (MV.W / 2 - MV.cam.cx * z), dpr * (MV.H / 2 - MV.cam.cy * z));
   const sel = MV.sel;
   const hl = (path, fill, stroke, lw) => { ctx.fillStyle = fill; ctx.fill(path, 'evenodd'); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = px * lw; ctx.stroke(path); } };
   if (MV.hoverP >= 0) hl(PPATH[MV.hoverP], 'rgba(255,255,255,.12)', 'rgba(255,255,255,.5)', 1.2);
@@ -438,6 +460,10 @@ function initMap(cv, mini) {
   mini.addEventListener('touchstart', e => { e.preventDefault(); const r = mini.getBoundingClientRect(); const t = e.touches[0]; centerOn((t.clientX - r.left) / r.width * WW, (t.clientY - r.top) / r.height * WH); }, { passive: false });
   mini.addEventListener('touchmove', e => { e.preventDefault(); const r = mini.getBoundingClientRect(); const t = e.touches[0]; centerOn((t.clientX - r.left) / r.width * WW, (t.clientY - r.top) / r.height * WH); }, { passive: false });
   function hover(x, y) {
+    MV.mx = x; MV.my = y;
+    const cg = chipAt(x, y);
+    if (cg && MV.onChip) { MV.onChip(cg, x, y); MV.chipTip = true; return; }
+    if (MV.chipTip) { MV.chipTip = false; hideTip(); }
     const [wx, wy] = s2w(x, y); const h = pickAt(wx, wy);
     const hp = h && h.k === 'p' ? h.id : -1, hs = h && h.k === 's' ? h.id : -1;
     MV.hoverTarget = h; MV.mx = x; MV.my = y;
@@ -449,7 +475,10 @@ function initMap(cv, mini) {
     const animate = (G && !G.paused) || MV.fxs.length || MV.dirty || (G && G.fx.length);
     if (animate || t - (MV.lastDraw || 0) > 400) {
       MV.lastDraw = t; MV.dirty = false;
-      drawMap(); if (G) drawOverlay(); else drawOverlay();
+      const bk = [MV.cam.cx.toFixed(2), MV.cam.cy.toFixed(2), MV.cam.z.toFixed(3), MV.W, MV.H, MV.mode, G ? G.ownVer + '|' + (/^(rel|pow|blo)/.test(MV.mode) ? (G.hour / 8 | 0) : 0) : 'x'].join('|');
+      if (bk !== MV.baseKey || !MV.bcv || MV.bcv.width !== MV.cv.width) { if (!MV.bcv) { MV.bcv = document.createElement('canvas'); MV.bctx = MV.bcv.getContext('2d'); } if (MV.bcv.width !== MV.cv.width || MV.bcv.height !== MV.cv.height) { MV.bcv.width = MV.cv.width; MV.bcv.height = MV.cv.height; } drawBase(); MV.baseKey = bk; }
+      MV.ctx.setTransform(1, 0, 0, 1, 0, 0); MV.ctx.drawImage(MV.bcv, 0, 0);
+      drawHL(); drawOverlay();
       if (miniDirty || t - miniTimer > 250) { miniTimer = t; drawMini(); }
     }
     requestAnimationFrame(frame);

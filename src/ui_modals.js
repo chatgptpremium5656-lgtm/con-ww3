@@ -1,6 +1,6 @@
 'use strict';
 /* ===== Modal windows ===== */
-const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты' };
+const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты', tutorial: '🎖 Добро пожаловать, командующий' };
 const TABS = { overview: [['country', 'Моя страна'], ['world', 'Страны мира'], ['wars', 'Войны'], ['victory', 'Победа']], army: [['units', 'Войска'], ['prod', 'Производство'], ['build', 'Строительство']], events: [['mine', 'Мои'], ['all', 'Мировые']] };
 function openModal(m) { UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
 function closeModal() { UI.modal = null; $('modal-back').classList.add('hidden'); hideTip(); }
@@ -9,7 +9,7 @@ $('modal-back').addEventListener('mousedown', e => { if (e.target.id === 'modal-
 function renderModal(keepScroll) {
   const m = UI.modal; if (!m) return;
   const box = $('modal'); const mb0 = box.querySelector('.mb'); const st = keepScroll && mb0 ? mb0.scrollTop : 0;
-  const sm = m === 'menu' || m === 'layers';
+  const sm = m === 'menu' || m === 'layers' || m === 'tutorial';
   box.className = sm ? 'sm' : '';
   const tab = UI.tab[m] || (TABS[m] ? TABS[m][0][0] : '');
   let body = '';
@@ -23,6 +23,7 @@ function renderModal(keepScroll) {
     case 'help': body = helpHTML(); break;
     case 'menu': body = menuHTML(); break;
     case 'layers': body = layersHTML(); break;
+    case 'tutorial': body = tutorialHTML(); break;
   }
   let h = `<div class="mh"><h2>${TITLES[m]}</h2><button class="btn" data-act="closemodal">✕ Закрыть</button></div>`;
   if (TABS[m]) h += `<div class="tabs">${TABS[m].map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
@@ -192,9 +193,25 @@ function helpHTML() {
 <h3>Война</h3><p>Объявите войну через 🤝 Дипломатию. Войска, вошедшие в провинцию с противником, вступают в бой. Чтобы захватить провинцию, уничтожьте защитников и удерживайте её. Авиация вылетает с аэродромов (радиус ограничен), ракеты бьют разово. Союзники по альянсу вступают в войну. <b>Ядерный удар</b> уничтожает всё — но весь мир обернётся против вас.</p>
 <h3>Десант</h3><p>Постройте <b>Транспорт</b> в порту, погрузите на него войска из той же провинции (кнопка «Грузить»), отправьте его приказом в прибрежную провинцию врага — войска высадятся автоматически. Прикройте высадку флотом и авиацией.</p>
 <h3>Туман войны</h3><p>Вы видите вражеские войска только возле своих провинций, юнитов и радаров. Субмарины скрыты, пока рядом нет кораблей/авиации.</p>
-<p class="note">Это фан-проект-эксперимент в духе Conflict of Nations: WW3, написанный с нуля. Карта построена по данным Natural Earth.</p></div>`;
+<h3>Юниты</h3>${unitTableHTML()}<p class="note">Это фан-проект-эксперимент в духе Conflict of Nations: WW3, написанный с нуля. Карта построена по данным Natural Earth.</p></div>`;
 }
 
+function tutorialHTML() {
+  const c = G.C[G.player];
+  return `<div style="line-height:1.55"><p>Вы командуете государством <b>${esc(c.n)}</b>. Мир на грани Третьей мировой войны. Цель — набрать <b>${Math.round(G.opts.win * 100)}%</b> победных очков ★ вместе с союзниками.</p>
+  <ol style="padding-left:20px;margin:6px 0">
+  <li><b>Экономика.</b> Выберите свою провинцию — стройте здания (кнопки «＋»). Начните с <b>Инфраструктуры</b> и <b>Ресурсного комплекса</b>.</li>
+  <li><b>Армия.</b> В провинции с Казармами/Заводом/Аэродромом закажите войска. Ресурсы тратятся сразу, юнит появится по готовности.</li>
+  <li><b>Приказы.</b> Кликните по значку войск, затем <b>правой кнопкой</b> (на телефоне — долгое нажатие) по цели. Кнопки внизу: идти, удар, патруль, пуск.</li>
+  <li><b>Дипломатия.</b> Кнопка 🤝: объявляйте войну, просите мир, вступайте в альянсы. Союзники делят обзор и приходят на помощь.</li>
+  <li><b>Время.</b> Игра идёт в реальном времени. Пауза — пробел, скорость — клавиши 1–5. Следите за дефицитом 🌾📦⛽ — покупайте на рынке 💱.</li></ol>
+  <p class="note">Подсказка: подготовьтесь до начала войны, а затем объявляйте её слабому соседу.</p><div class="row"><button class="btn pri" style="flex:1" data-act="tutgo">▶ Начать игру</button></div></div>`;
+}
+function unitTableHTML() {
+  let h = `<table class="t" style="font-size:12px"><tr><th>Юнит</th><th>Пехота</th><th>Техника</th><th>Воздух</th><th>Флот</th><th>Здания</th><th>Броня</th><th>Скор.</th><th>Дальн.</th></tr>`;
+  for (const t of UNIT_ORDER) { const d = UNITS[t]; h += `<tr data-tip="${esc(d.desc)}"><td>${unitIcon(t, '#fff', 18)} ${d.n}</td><td>${d.a.s}</td><td>${d.a.h}</td><td>${d.a.a}</td><td>${d.a.n}</td><td>${d.a.x}</td><td>${d.arm}</td><td>${d.spd}</td><td>${d.rng || '—'}</td></tr>`; }
+  return h + '</table>';
+}
 /* ---------- menu & layers ---------- */
 function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m' + n) || 'null'); return m; } catch (e) { return null; } }
 function menuHTML() {
@@ -240,6 +257,7 @@ window.actModal = function (a, d, el, e) {
     case 'trade': { const err = trade(G.player, d.r, +d.q, d.b === '1'); if (err) toast(err, 'war'); else Snd.play('ok'); renderModal(true); break; }
     case 'save': doSave(+d.n); renderModal(true); break;
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;
+    case 'tutgo': closeModal(); G.paused = false; G.speed = 1; updateSpeedBtns(); break;
     case 'optsound': UI.sound = el.checked; break;
     case 'optlabels': MV.labels = el.checked; MV.dirty = true; break;
     case 'optfog': G.fogOff = !el.checked; updateVis(true); MV.dirty = true; break;

@@ -87,7 +87,7 @@ function afterNew() {
   buildHUD(); closeModalSilently();
   const c = G.C[G.player]; focusLoc(c.cap, 3.4); selectProv(c.cap);
   refreshHUD(true);
-  toast(`Вы командуете: ${c.n}. Нажмите ▶ или Пробел, чтобы начать. Справка — кнопка ❓`, 'good');
+  openModal('tutorial');
 }
 function closeModalSilently() { UI.modal = null; $('modal-back').classList.add('hidden'); }
 function afterLoad() {

@@ -62,7 +62,7 @@ function economyTick() {
     const inc = c.inc, use = c.use, r = c.res;
     for (const k of RES) {
       let v = r[k] + ((inc[k] || 0) - (use[k] || 0)) / 24;
-      if (v < 0) { v = 0; if (k !== 'cash' && (k === 'food' || k === 'supp' || k === 'fuel')) c.short[k] = true; }
+      if (v < 0) { v = 0; if (k === 'food' || k === 'supp' || k === 'fuel') { if (!c.short[k]) note(c.id, 'warn', `⚠ Дефицит: ${RES_INFO[k].n}! Войска слабеют — купите на рынке или повысьте добычу`, -1); c.short[k] = true; } }
       else if (c.short[k] && v > 8) c.short[k] = false;
       const cap = Math.max(3000, (inc[k] || 0) * 80);
       if (v > cap) v = cap;
@@ -640,6 +640,7 @@ function captureProv(p, by) {
   if (old === by) return;
   const O = G.C[old], X = G.C[by];
   O.provs.splice(O.provs.indexOf(p), 1); X.provs.push(p);
+  G.ownVer = (G.ownVer || 0) + 1;
   pv.o = by; pv.since = G.hour; pv.cap = null; pv.q = []; pv.bq = null; pv.dmg = Math.min(100, pv.dmg + 20);
   for (const b of ['factory', 'airfield', 'naval', 'silo', 'barracks', 'aa']) if (pv.b[b] > 0 && R() < 0.4) pv.b[b]--;
   for (const id of G.at[p].slice()) { const u = G.U.get(id); if (!u) continue; const d = UNITS[u.t]; if (u.o === old || (areAllied(u.o, old) && G.war[u.o * NC + by])) { if (d.dom !== 'land') killUnit(u, by); } }
@@ -660,7 +661,7 @@ function pickCapital(c) {
 }
 function eliminate(c, by) {
   const C = G.C[c]; if (!C.alive) return;
-  C.alive = false;
+  C.alive = false; G.ownVer = (G.ownVer || 0) + 1;
   for (const [, u] of Array.from(G.U)) if (u.o === c) killUnit(u);
   if (C.alliance >= 0) { const al = G.al[C.alliance]; al.members = al.members.filter(m => m !== c); if (al.leader === c && al.members.length) al.leader = al.members[0]; C.alliance = -1; }
   for (let o = 0; o < NC; o++) { G.war[c * NC + o] = G.war[o * NC + c] = 0; }

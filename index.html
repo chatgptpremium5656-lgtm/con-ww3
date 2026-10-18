@@ -335,6 +335,7 @@ const isCoastal = p => PROV[p].seas.length > 0;
 const cidx = {}; CTY.forEach((c, i) => cidx[c.key] = i);
 
 let G = null;
+let SHELL_N = 0;
 
 /* seeded rng (mulberry32) */
 function makeRng(seed) { let a = seed >>> 0; const f = function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; f.get = () => a; f.set = v => { a = v; }; return f; }
@@ -396,7 +397,7 @@ function newGameShell(opts) {
     C: [], pv: [], U: new Map(), nextU: 1, at: Array.from({ length: N }, () => []),
     rel: new Int8Array(NC * NC), war: new Uint8Array(NC * NC), acc: new Uint8Array(NC * NC), warStart: new Int32Array(NC * NC),
     al: [], news: [], fx: [], market: { m: { food: 1, supp: 1, fuel: 1, comp: 1, elec: 1, rare: 1 } },
-    player: -1, over: null, tension: 1, stats: { battles: 0, nukes: 0 }, vis: new Uint8Array(N), visHour: -99, totalVP: 0, wlost: new Int16Array(NC * NC), bat: new Map(), truce: new Int32Array(NC * NC)
+    player: -1, over: null, tension: 1, stats: { battles: 0, nukes: 0 }, vis: new Uint8Array(N), visHour: -99, totalVP: 0, wlost: new Int16Array(NC * NC), ownVer: (++SHELL_N) * 100000, bat: new Map(), truce: new Int32Array(NC * NC)
   };
   G.opts.seed = seed;
   const sc0 = SCENARIOS[G.opts.scenario] || SCENARIOS.eve;
@@ -721,7 +722,7 @@ function economyTick() {
     const inc = c.inc, use = c.use, r = c.res;
     for (const k of RES) {
       let v = r[k] + ((inc[k] || 0) - (use[k] || 0)) / 24;
-      if (v < 0) { v = 0; if (k !== 'cash' && (k === 'food' || k === 'supp' || k === 'fuel')) c.short[k] = true; }
+      if (v < 0) { v = 0; if (k === 'food' || k === 'supp' || k === 'fuel') { if (!c.short[k]) note(c.id, 'warn', `⚠ Дефицит: ${RES_INFO[k].n}! Войска слабеют — купите на рынке или повысьте добычу`, -1); c.short[k] = true; } }
       else if (c.short[k] && v > 8) c.short[k] = false;
       const cap = Math.max(3000, (inc[k] || 0) * 80);
       if (v > cap) v = cap;
@@ -1299,6 +1300,7 @@ function captureProv(p, by) {
   if (old === by) return;
   const O = G.C[old], X = G.C[by];
   O.provs.splice(O.provs.indexOf(p), 1); X.provs.push(p);
+  G.ownVer = (G.ownVer || 0) + 1;
   pv.o = by; pv.since = G.hour; pv.cap = null; pv.q = []; pv.bq = null; pv.dmg = Math.min(100, pv.dmg + 20);
   for (const b of ['factory', 'airfield', 'naval', 'silo', 'barracks', 'aa']) if (pv.b[b] > 0 && R() < 0.4) pv.b[b]--;
   for (const id of G.at[p].slice()) { const u = G.U.get(id); if (!u) continue; const d = UNITS[u.t]; if (u.o === old || (areAllied(u.o, old) && G.war[u.o * NC + by])) { if (d.dom !== 'land') killUnit(u, by); } }
@@ -1319,7 +1321,7 @@ function pickCapital(c) {
 }
 function eliminate(c, by) {
   const C = G.C[c]; if (!C.alive) return;
-  C.alive = false;
+  C.alive = false; G.ownVer = (G.ownVer || 0) + 1;
   for (const [, u] of Array.from(G.U)) if (u.o === c) killUnit(u);
   if (C.alliance >= 0) { const al = G.al[C.alliance]; al.members = al.members.filter(m => m !== c); if (al.leader === c && al.members.length) al.leader = al.members[0]; C.alliance = -1; }
   for (let o = 0; o < NC; o++) { G.war[c * NC + o] = G.war[o * NC + c] = 0; }
@@ -2095,6 +2097,15 @@ const MV = {
 const hexCache = {};
 const rgbOf = h => hexCache[h] || (hexCache[h] = hex2rgb(h));
 const ocean = '#0e2740';
+const TPAT = {};
+function makePatterns(ctx) {
+  const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g); return ctx.createPattern(c, 'repeat'); };
+  TPAT.mountain = mk(30, 24, g => { g.strokeStyle = 'rgba(40,25,10,.55)'; g.lineWidth = 1.6; g.lineJoin = 'round'; [[7, 9], [21, 9], [14, 20]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x - 5, y + 3); g.lineTo(x, y - 4); g.lineTo(x + 5, y + 3); g.stroke(); }); });
+  TPAT.forest = mk(22, 22, g => { g.fillStyle = 'rgba(10,50,20,.5)'; [[5, 6], [16, 5], [11, 16], [3, 17], [20, 18]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.3, 0, 7); g.fill(); }); });
+  TPAT.jungle = mk(16, 16, g => { g.fillStyle = 'rgba(0,45,15,.55)'; [[4, 4], [12, 6], [8, 12], [2, 13], [14, 14]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); }); });
+  TPAT.desert = mk(24, 24, g => { g.fillStyle = 'rgba(120,80,20,.38)'; [[4, 5], [17, 9], [10, 19], [21, 21], [2, 14]].forEach(([x, y]) => { g.fillRect(x, y, 1.6, 1.6); }); });
+  TPAT.arctic = mk(20, 20, g => { g.fillStyle = 'rgba(255,255,255,.55)'; [[3, 4], [12, 10], [7, 16], [17, 17]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 1.4, 0, 7); g.fill(); }); });
+}
 
 function minZoom() { return Math.max(MV.W / WW, MV.H / WH); }
 function clampCam() {
@@ -2154,8 +2165,8 @@ function resize() {
   clampCam(); MV.dirty = true;
 }
 
-function drawMap() {
-  const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr;
+function drawBase() {
+  const ctx = MV.bctx, z = MV.cam.z, dpr = MV.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = ocean; ctx.fillRect(0, 0, MV.W * dpr, MV.H * dpr);
   ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (MV.W / 2 - MV.cam.cx * z), dpr * (MV.H / 2 - MV.cam.cy * z));
@@ -2169,6 +2180,9 @@ function drawMap() {
   ctx.strokeStyle = 'rgba(120,170,220,.14)'; ctx.beginPath(); const ey = projY(0); ctx.moveTo(0, ey); ctx.lineTo(WW, ey); ctx.stroke();
   // sea zone borders
   ctx.strokeStyle = 'rgba(140,190,240,.16)'; ctx.lineWidth = px * 0.8; ctx.setLineDash([px * 4, px * 4]); ctx.stroke(BORDER.sea); ctx.setLineDash([]);
+  // coastal glow
+  ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(70,140,215,.09)'; ctx.lineWidth = px * 18; ctx.stroke(BORDER.coast);
+  ctx.strokeStyle = 'rgba(90,165,235,.12)'; ctx.lineWidth = px * 8; ctx.stroke(BORDER.coast);
   // land fills
   const vx0 = MV.cam.cx - MV.W / 2 / z, vx1 = MV.cam.cx + MV.W / 2 / z, vy0 = MV.cam.cy - MV.H / 2 / z, vy1 = MV.cam.cy + MV.H / 2 / z;
   ctx.lineJoin = 'round';
@@ -2178,6 +2192,13 @@ function drawMap() {
     ctx.fillStyle = f; ctx.fill(PPATH[i], 'evenodd');
     ctx.strokeStyle = f; ctx.lineWidth = px * 0.9; ctx.stroke(PPATH[i]);
   }
+  // terrain textures
+  if (z >= 1.25 && (MV.mode === 'political' || MV.mode === 'relations' || MV.mode === 'bloc' || MV.mode === 'terrain')) {
+    if (!TPAT.mountain) makePatterns(ctx);
+    const sc = 0.5 / z;
+    for (const t of ['mountain', 'forest', 'jungle', 'desert', 'arctic']) { const pt = TPAT[t]; if (pt.setTransform) pt.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0])); ctx.fillStyle = pt; ctx.globalAlpha = t === 'arctic' ? 0.5 : 0.8; ctx.fill(TERRPATH[t], 'evenodd'); }
+    ctx.globalAlpha = 1;
+  }
   // terrain tint
   if (MV.mode === 'political' || MV.mode === 'relations' || MV.mode === 'bloc') {
     for (const t in TERRAIN) { const c = TERRAIN[t].col; ctx.fillStyle = rgb2css(c[0], c[1], c[2], t === 'plains' ? 0 : 0.16); if (t !== 'plains') ctx.fill(TERRPATH[t], 'evenodd'); }
@@ -2186,7 +2207,10 @@ function drawMap() {
   ctx.strokeStyle = 'rgba(10,20,30,.45)'; ctx.lineWidth = px * 0.7; ctx.stroke(BORDER.prov);
   ctx.strokeStyle = 'rgba(8,14,22,.92)'; ctx.lineWidth = px * 1.45; ctx.stroke(BORDER.cty);
   ctx.strokeStyle = 'rgba(160,205,255,.55)'; ctx.lineWidth = px * 1.1; ctx.stroke(BORDER.coast);
-  // hover / selection
+}
+function drawHL() {
+  const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr, px = 1 / z;
+  ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (MV.W / 2 - MV.cam.cx * z), dpr * (MV.H / 2 - MV.cam.cy * z));
   const sel = MV.sel;
   const hl = (path, fill, stroke, lw) => { ctx.fillStyle = fill; ctx.fill(path, 'evenodd'); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = px * lw; ctx.stroke(path); } };
   if (MV.hoverP >= 0) hl(PPATH[MV.hoverP], 'rgba(255,255,255,.12)', 'rgba(255,255,255,.5)', 1.2);
@@ -2465,6 +2489,10 @@ function initMap(cv, mini) {
   mini.addEventListener('touchstart', e => { e.preventDefault(); const r = mini.getBoundingClientRect(); const t = e.touches[0]; centerOn((t.clientX - r.left) / r.width * WW, (t.clientY - r.top) / r.height * WH); }, { passive: false });
   mini.addEventListener('touchmove', e => { e.preventDefault(); const r = mini.getBoundingClientRect(); const t = e.touches[0]; centerOn((t.clientX - r.left) / r.width * WW, (t.clientY - r.top) / r.height * WH); }, { passive: false });
   function hover(x, y) {
+    MV.mx = x; MV.my = y;
+    const cg = chipAt(x, y);
+    if (cg && MV.onChip) { MV.onChip(cg, x, y); MV.chipTip = true; return; }
+    if (MV.chipTip) { MV.chipTip = false; hideTip(); }
     const [wx, wy] = s2w(x, y); const h = pickAt(wx, wy);
     const hp = h && h.k === 'p' ? h.id : -1, hs = h && h.k === 's' ? h.id : -1;
     MV.hoverTarget = h; MV.mx = x; MV.my = y;
@@ -2476,7 +2504,10 @@ function initMap(cv, mini) {
     const animate = (G && !G.paused) || MV.fxs.length || MV.dirty || (G && G.fx.length);
     if (animate || t - (MV.lastDraw || 0) > 400) {
       MV.lastDraw = t; MV.dirty = false;
-      drawMap(); if (G) drawOverlay(); else drawOverlay();
+      const bk = [MV.cam.cx.toFixed(2), MV.cam.cy.toFixed(2), MV.cam.z.toFixed(3), MV.W, MV.H, MV.mode, G ? G.ownVer + '|' + (/^(rel|pow|blo)/.test(MV.mode) ? (G.hour / 8 | 0) : 0) : 'x'].join('|');
+      if (bk !== MV.baseKey || !MV.bcv || MV.bcv.width !== MV.cv.width) { if (!MV.bcv) { MV.bcv = document.createElement('canvas'); MV.bctx = MV.bcv.getContext('2d'); } if (MV.bcv.width !== MV.cv.width || MV.bcv.height !== MV.cv.height) { MV.bcv.width = MV.cv.width; MV.bcv.height = MV.cv.height; } drawBase(); MV.baseKey = bk; }
+      MV.ctx.setTransform(1, 0, 0, 1, 0, 0); MV.ctx.drawImage(MV.bcv, 0, 0);
+      drawHL(); drawOverlay();
       if (miniDirty || t - miniTimer > 250) { miniTimer = t; drawMini(); }
     }
     requestAnimationFrame(frame);
@@ -2632,6 +2663,16 @@ function wireMap() {
     } else if (h && h.k === 's') { showTip(`<b>${esc(SEA[h.id].name)}</b><div style="color:#8fa6bd">Морская зона</div>`, x + 8, y + 8); }
     else if (!UI.hoverTip) hideTip();
   };
+  MV.onChip = (g, x, y) => {
+    const by = {}; let hp = 0, mor = 0;
+    for (const id of g.ids) { const u = G.U.get(id); if (!u) continue; (by[u.t] = by[u.t] || []).push(u); hp += u.hp; mor += u.mor; }
+    const n = g.ids.length || 1;
+    let s = `<div style="display:flex;gap:6px;align-items:center">${flagImg(g.o)}<b>${esc(G.C[g.o].n)}</b></div><div style="color:#8fa6bd">${esc(locName(g.loc))}</div>`;
+    for (const t in by) s += `<div>${unitIcon(t, '#fff', 16)} ${UNITS[t].n} ×${by[t].length} <span style="color:#8fa6bd">(пок. ${GEN_NAMES[by[t][0].g]})</span></div>`;
+    s += `<div style="color:#8fa6bd">Прочность ${Math.round(hp / n)}% · Мораль ${Math.round(mor / n)}%</div>`;
+    if (g.o === G.player) s += `<div style="color:#8fa6bd;font-size:11px">Клик — выбрать, ПКМ по карте — приказ</div>`;
+    showTip(s, x + 12, y + 12);
+  };
   MV.onKey = e => {
     if (!G) return;
     if (e.key === 'Escape') { if (UI.modal) closeModal(); else if (UI.mode) setMode(null); else clearSel(); }
@@ -2659,7 +2700,7 @@ const LEFT = [['overview', '🌍', 'Обзор'], ['army', '🎖', 'Армия']
 const MODES = [['political', '🏳', 'Политическая'], ['terrain', '⛰', 'Рельеф'], ['relations', '🤝', 'Отношения'], ['bloc', '🛡', 'Альянсы'], ['pop', '👥', 'Население'], ['power', '💥', 'Военная мощь'], ['res:fuel', '⛽', 'Нефть'], ['res:comp', '🔩', 'Металлы'], ['res:food', '🌾', 'Еда'], ['res:rare', '💎', 'Редкие'], ['res:supp', '🏭', 'Промышленность'], ['res:elec', '💻', 'Электроника']];
 function buildHUD() {
   $('leftbar').innerHTML = LEFT.map(([m, i, t]) => `<button data-act="modal" data-m="${m}" data-tip="${t}" id="lb-${m}">${i}<span>${t}</span></button>`).join('');
-  $('tb-speed').innerHTML = `<button data-act="speed" data-v="0" data-tip="Пауза (Пробел)">⏸</button>` + [1, 2, 3, 4, 5].map(v => `<button data-act="speed" data-v="${v}" data-tip="Скорость ${v} (клавиша ${v})">${'▶'.repeat(Math.min(v, 3))}${v > 3 ? '▶' : ''}</button>`).join('');
+  $('tb-speed').innerHTML = `<button data-act="speed" data-v="0" data-tip="Пауза (Пробел)">⏸</button>` + [1, 2, 3, 4, 5].map(v => `<button data-act="speed" data-v="${v}" data-tip="Скорость ${v} (клавиша ${v})">${v === 1 ? '▶' : v + '×'}</button>`).join('');
   $('tb-right').innerHTML = `<button class="ibtn" data-act="modal" data-m="events" data-tip="Сообщения" id="bellb">🔔<span class="badge hidden" id="bell"></span></button><button class="ibtn" data-act="modal" data-m="menu" data-tip="Меню">☰</button>`;
   $('mapmodes').innerHTML = MODES.slice(0, 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
   $('mini-wrap').style.display = 'block';
@@ -2881,7 +2922,7 @@ $('tb-country').onclick = () => openModal('overview');
 
 'use strict';
 /* ===== Modal windows ===== */
-const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты' };
+const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты', tutorial: '🎖 Добро пожаловать, командующий' };
 const TABS = { overview: [['country', 'Моя страна'], ['world', 'Страны мира'], ['wars', 'Войны'], ['victory', 'Победа']], army: [['units', 'Войска'], ['prod', 'Производство'], ['build', 'Строительство']], events: [['mine', 'Мои'], ['all', 'Мировые']] };
 function openModal(m) { UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
 function closeModal() { UI.modal = null; $('modal-back').classList.add('hidden'); hideTip(); }
@@ -2890,7 +2931,7 @@ $('modal-back').addEventListener('mousedown', e => { if (e.target.id === 'modal-
 function renderModal(keepScroll) {
   const m = UI.modal; if (!m) return;
   const box = $('modal'); const mb0 = box.querySelector('.mb'); const st = keepScroll && mb0 ? mb0.scrollTop : 0;
-  const sm = m === 'menu' || m === 'layers';
+  const sm = m === 'menu' || m === 'layers' || m === 'tutorial';
   box.className = sm ? 'sm' : '';
   const tab = UI.tab[m] || (TABS[m] ? TABS[m][0][0] : '');
   let body = '';
@@ -2904,6 +2945,7 @@ function renderModal(keepScroll) {
     case 'help': body = helpHTML(); break;
     case 'menu': body = menuHTML(); break;
     case 'layers': body = layersHTML(); break;
+    case 'tutorial': body = tutorialHTML(); break;
   }
   let h = `<div class="mh"><h2>${TITLES[m]}</h2><button class="btn" data-act="closemodal">✕ Закрыть</button></div>`;
   if (TABS[m]) h += `<div class="tabs">${TABS[m].map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
@@ -3073,9 +3115,25 @@ function helpHTML() {
 <h3>Война</h3><p>Объявите войну через 🤝 Дипломатию. Войска, вошедшие в провинцию с противником, вступают в бой. Чтобы захватить провинцию, уничтожьте защитников и удерживайте её. Авиация вылетает с аэродромов (радиус ограничен), ракеты бьют разово. Союзники по альянсу вступают в войну. <b>Ядерный удар</b> уничтожает всё — но весь мир обернётся против вас.</p>
 <h3>Десант</h3><p>Постройте <b>Транспорт</b> в порту, погрузите на него войска из той же провинции (кнопка «Грузить»), отправьте его приказом в прибрежную провинцию врага — войска высадятся автоматически. Прикройте высадку флотом и авиацией.</p>
 <h3>Туман войны</h3><p>Вы видите вражеские войска только возле своих провинций, юнитов и радаров. Субмарины скрыты, пока рядом нет кораблей/авиации.</p>
-<p class="note">Это фан-проект-эксперимент в духе Conflict of Nations: WW3, написанный с нуля. Карта построена по данным Natural Earth.</p></div>`;
+<h3>Юниты</h3>${unitTableHTML()}<p class="note">Это фан-проект-эксперимент в духе Conflict of Nations: WW3, написанный с нуля. Карта построена по данным Natural Earth.</p></div>`;
 }
 
+function tutorialHTML() {
+  const c = G.C[G.player];
+  return `<div style="line-height:1.55"><p>Вы командуете государством <b>${esc(c.n)}</b>. Мир на грани Третьей мировой войны. Цель — набрать <b>${Math.round(G.opts.win * 100)}%</b> победных очков ★ вместе с союзниками.</p>
+  <ol style="padding-left:20px;margin:6px 0">
+  <li><b>Экономика.</b> Выберите свою провинцию — стройте здания (кнопки «＋»). Начните с <b>Инфраструктуры</b> и <b>Ресурсного комплекса</b>.</li>
+  <li><b>Армия.</b> В провинции с Казармами/Заводом/Аэродромом закажите войска. Ресурсы тратятся сразу, юнит появится по готовности.</li>
+  <li><b>Приказы.</b> Кликните по значку войск, затем <b>правой кнопкой</b> (на телефоне — долгое нажатие) по цели. Кнопки внизу: идти, удар, патруль, пуск.</li>
+  <li><b>Дипломатия.</b> Кнопка 🤝: объявляйте войну, просите мир, вступайте в альянсы. Союзники делят обзор и приходят на помощь.</li>
+  <li><b>Время.</b> Игра идёт в реальном времени. Пауза — пробел, скорость — клавиши 1–5. Следите за дефицитом 🌾📦⛽ — покупайте на рынке 💱.</li></ol>
+  <p class="note">Подсказка: подготовьтесь до начала войны, а затем объявляйте её слабому соседу.</p><div class="row"><button class="btn pri" style="flex:1" data-act="tutgo">▶ Начать игру</button></div></div>`;
+}
+function unitTableHTML() {
+  let h = `<table class="t" style="font-size:12px"><tr><th>Юнит</th><th>Пехота</th><th>Техника</th><th>Воздух</th><th>Флот</th><th>Здания</th><th>Броня</th><th>Скор.</th><th>Дальн.</th></tr>`;
+  for (const t of UNIT_ORDER) { const d = UNITS[t]; h += `<tr data-tip="${esc(d.desc)}"><td>${unitIcon(t, '#fff', 18)} ${d.n}</td><td>${d.a.s}</td><td>${d.a.h}</td><td>${d.a.a}</td><td>${d.a.n}</td><td>${d.a.x}</td><td>${d.arm}</td><td>${d.spd}</td><td>${d.rng || '—'}</td></tr>`; }
+  return h + '</table>';
+}
 /* ---------- menu & layers ---------- */
 function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m' + n) || 'null'); return m; } catch (e) { return null; } }
 function menuHTML() {
@@ -3121,6 +3179,7 @@ window.actModal = function (a, d, el, e) {
     case 'trade': { const err = trade(G.player, d.r, +d.q, d.b === '1'); if (err) toast(err, 'war'); else Snd.play('ok'); renderModal(true); break; }
     case 'save': doSave(+d.n); renderModal(true); break;
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;
+    case 'tutgo': closeModal(); G.paused = false; G.speed = 1; updateSpeedBtns(); break;
     case 'optsound': UI.sound = el.checked; break;
     case 'optlabels': MV.labels = el.checked; MV.dirty = true; break;
     case 'optfog': G.fogOff = !el.checked; updateVis(true); MV.dirty = true; break;
@@ -3217,7 +3276,7 @@ function afterNew() {
   buildHUD(); closeModalSilently();
   const c = G.C[G.player]; focusLoc(c.cap, 3.4); selectProv(c.cap);
   refreshHUD(true);
-  toast(`Вы командуете: ${c.n}. Нажмите ▶ или Пробел, чтобы начать. Справка — кнопка ❓`, 'good');
+  openModal('tutorial');
 }
 function closeModalSilently() { UI.modal = null; $('modal-back').classList.add('hidden'); }
 function afterLoad() {

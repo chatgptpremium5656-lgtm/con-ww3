@@ -146,6 +146,16 @@ function wireMap() {
     } else if (h && h.k === 's') { showTip(`<b>${esc(SEA[h.id].name)}</b><div style="color:#8fa6bd">Морская зона</div>`, x + 8, y + 8); }
     else if (!UI.hoverTip) hideTip();
   };
+  MV.onChip = (g, x, y) => {
+    const by = {}; let hp = 0, mor = 0;
+    for (const id of g.ids) { const u = G.U.get(id); if (!u) continue; (by[u.t] = by[u.t] || []).push(u); hp += u.hp; mor += u.mor; }
+    const n = g.ids.length || 1;
+    let s = `<div style="display:flex;gap:6px;align-items:center">${flagImg(g.o)}<b>${esc(G.C[g.o].n)}</b></div><div style="color:#8fa6bd">${esc(locName(g.loc))}</div>`;
+    for (const t in by) s += `<div>${unitIcon(t, '#fff', 16)} ${UNITS[t].n} ×${by[t].length} <span style="color:#8fa6bd">(пок. ${GEN_NAMES[by[t][0].g]})</span></div>`;
+    s += `<div style="color:#8fa6bd">Прочность ${Math.round(hp / n)}% · Мораль ${Math.round(mor / n)}%</div>`;
+    if (g.o === G.player) s += `<div style="color:#8fa6bd;font-size:11px">Клик — выбрать, ПКМ по карте — приказ</div>`;
+    showTip(s, x + 12, y + 12);
+  };
   MV.onKey = e => {
     if (!G) return;
     if (e.key === 'Escape') { if (UI.modal) closeModal(); else if (UI.mode) setMode(null); else clearSel(); }
@@ -173,7 +183,7 @@ const LEFT = [['overview', '🌍', 'Обзор'], ['army', '🎖', 'Армия']
 const MODES = [['political', '🏳', 'Политическая'], ['terrain', '⛰', 'Рельеф'], ['relations', '🤝', 'Отношения'], ['bloc', '🛡', 'Альянсы'], ['pop', '👥', 'Население'], ['power', '💥', 'Военная мощь'], ['res:fuel', '⛽', 'Нефть'], ['res:comp', '🔩', 'Металлы'], ['res:food', '🌾', 'Еда'], ['res:rare', '💎', 'Редкие'], ['res:supp', '🏭', 'Промышленность'], ['res:elec', '💻', 'Электроника']];
 function buildHUD() {
   $('leftbar').innerHTML = LEFT.map(([m, i, t]) => `<button data-act="modal" data-m="${m}" data-tip="${t}" id="lb-${m}">${i}<span>${t}</span></button>`).join('');
-  $('tb-speed').innerHTML = `<button data-act="speed" data-v="0" data-tip="Пауза (Пробел)">⏸</button>` + [1, 2, 3, 4, 5].map(v => `<button data-act="speed" data-v="${v}" data-tip="Скорость ${v} (клавиша ${v})">${'▶'.repeat(Math.min(v, 3))}${v > 3 ? '▶' : ''}</button>`).join('');
+  $('tb-speed').innerHTML = `<button data-act="speed" data-v="0" data-tip="Пауза (Пробел)">⏸</button>` + [1, 2, 3, 4, 5].map(v => `<button data-act="speed" data-v="${v}" data-tip="Скорость ${v} (клавиша ${v})">${v === 1 ? '▶' : v + '×'}</button>`).join('');
   $('tb-right').innerHTML = `<button class="ibtn" data-act="modal" data-m="events" data-tip="Сообщения" id="bellb">🔔<span class="badge hidden" id="bell"></span></button><button class="ibtn" data-act="modal" data-m="menu" data-tip="Меню">☰</button>`;
   $('mapmodes').innerHTML = MODES.slice(0, 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
   $('mini-wrap').style.display = 'block';
