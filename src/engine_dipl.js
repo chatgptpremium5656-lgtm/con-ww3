@@ -37,10 +37,20 @@ function declareWar(a, b, silent) {
     if (silent || relOf(m, b) > 5 || R() > 0.3) continue;
     setWar(m, b); joined.push(m); addRel(m, b, -30);
   }
-  // allies of the target outside alliance structure (friendly relation) may join
-  if (!silent && joined.length) news('join', `В войну вступают: ${joined.map(m => G.C[m].n).join(', ')}`, -1, joined, 'g');
+  if (!silent && joined.length) {
+    const sa = joined.filter(m => areAllied(m, a) || G.war[m * NC + b]).map(m => G.C[m].n), sb = joined.filter(m => !(areAllied(m, a) || G.war[m * NC + b])).map(m => G.C[m].n);
+    news('join', `В войну вступают. На стороне ${G.C[a].n}: ${sa.join(', ') || '—'}. На стороне ${G.C[b].n}: ${sb.join(', ') || '—'}`, -1, joined, 'g');
+  }
   if (!silent) for (const c of G.C) if (c.alive && c.id !== a && c.id !== b && !joined.includes(c.id)) addRel(c.id, a, c.gov === 'democracy' ? -3 : -1);
   return '';
+}
+function previewWar(a, b) {
+  const against = [], withUs = [];
+  const defAl = G.C[b].alliance;
+  if (defAl >= 0) for (const m of G.al[defAl].members) { if (m === b || m === a || !G.C[m].alive || areAllied(m, a)) continue; if (relOf(m, a) > 55) continue; against.push(m); }
+  const atkAl = G.C[a].alliance;
+  if (atkAl >= 0) for (const m of G.al[atkAl].members) { if (m === a || !G.C[m].alive || areAllied(m, b) || relOf(m, b) > 5) continue; withUs.push(m); }
+  return { against, withUs };
 }
 function setWar(a, b) { G.war[a * NC + b] = G.war[b * NC + a] = 1; G.warStart[a * NC + b] = G.warStart[b * NC + a] = G.hour; G.wlost[a * NC + b] = G.wlost[b * NC + a] = 0; }
 function makePeace(a, b) {
@@ -79,11 +89,11 @@ function aiPeaceEval(b, a) { // b = AI deciding, a = proposer
   let score = 0;
   score += (1 - ratio) * 1.5;
   score += (lost - took) * 0.5;
-  score += days > 40 ? 0.6 : days / 80;
+  score += days > 30 ? 0.7 : days / 45;
   score += (1 - B.provs.length / Math.max(1, initial)) * 2;
   score -= (B.agg - 2) * 0.25;
   if (took > lost + 1) score -= 0.8;
-  if (score > 0.55) return { ok: true, why: '' };
+  if (score > 0.4) return { ok: true, why: '' };
   return { ok: false, why: score > 0.2 ? 'Противник пока не готов к миру' : 'Противник уверен в победе и отказывается' };
 }
 function proposePeace(a, b) {
@@ -126,7 +136,7 @@ function allianceInviteEval(c, by) { // would AI country c join the alliance of 
   const rel = relOf(c, by);
   let shared = 0; for (const m of al.members) for (const o of warsOf(m)) if (G.war[c * NC + o] || C.rivals.indexOf(G.C[o].key) >= 0) shared++;
   const sc = rel + shared * 10 + (C.bloc === B.bloc && C.bloc !== 'NONE' ? 30 : 0);
-  if (sc >= 35) return { ok: true };
+  if (sc >= 55) return { ok: true };
   return { ok: false, why: 'Отношения недостаточно тёплые (' + Math.round(rel) + ')' };
 }
 function inviteToAlliance(by, c) {
@@ -138,10 +148,10 @@ function requestAccess(from, to) { // `from` asks `to` for military access
   return { ok: false, why: 'Отказано. Нужны отношения от +20 (сейчас ' + Math.round(relOf(from, to)) + ')' };
 }
 function giveGift(a, b, res, qty) {
-  const A = G.C[a]; if (A.res[res] < qty) return false;
+  const A = G.C[a]; if (!(qty > 0) || !isFinite(qty) || A.res[res] < qty) return false;
   A.res[res] -= qty; G.C[b].res[res] += qty;
   const base = { cash: 1, food: 1, supp: 1.6, fuel: 2, comp: 2.2, elec: 4, rare: 6, man: 8 }[res] || 1;
-  addRel(a, b, clamp(qty * base / Math.max(60, G.C[b].inc.cash || 100) * 12, 0.5, 25));
+  addRel(a, b, clamp(qty * base / Math.max(60, G.C[b].inc.cash || 100) * 4, 0.3, 8));
   return true;
 }
 
@@ -150,7 +160,7 @@ const BASE_PRICE = { food: 1, supp: 1.6, fuel: 2, comp: 2.2, elec: 4, rare: 6 };
 function priceOf(res, buy) { return BASE_PRICE[res] * G.market.m[res] * (buy ? 1.12 : 0.88); }
 function trade(c, res, qty, buy) {
   const C = G.C[c];
-  if (qty <= 0) return 'Количество?';
+  if (!(qty > 0) || !isFinite(qty)) return 'Количество?';
   if (buy) {
     const cost = priceOf(res, true) * qty;
     if (C.res.cash < cost) return 'Не хватает денег';

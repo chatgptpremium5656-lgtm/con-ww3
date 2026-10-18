@@ -122,6 +122,7 @@ function newGame(opts) {
   for (const [a, b] of sc.wars) {
     if (cidx[a] !== undefined && cidx[b] !== undefined && !G.war[cidx[a] * NC + cidx[b]]) { setWar(cidx[a], cidx[b]); addRel(cidx[a], cidx[b], -70); }
   }
+  G.vp0 = G.C[G.player].vp;
   if (G.opts.doc && DOCS[G.opts.doc]) G.C[G.player].doc = G.opts.doc;
   updateVis(true);
   return G;
@@ -330,8 +331,9 @@ function recalc(c) {
     provProd(co.id, p, out);
   }
   const gf = GOV_FX[co.gov] || GOV_FX.autocracy; out.cash *= gf.cash;
+  out.fuel += 1.2 * co.provs.length * (co.techs.indus >= 1 ? 1.4 : 1); out.supp += 0.8 * co.provs.length;
   co.inc = out; co.vp = co.provs.reduce((a, p) => a + PROV[p].vp, 0);
-  co.manCap = out.pop / 1000 * 0.006 * gf.man;
+  co.manCap = out.pop / 1000 * 0.009 * gf.man;
   co.dirty = false;
   // food need scales with current pop
   co.foodNeed = Math.pow(out.pop / 1e6, 0.85) * 0.8 * (co.foodScale || 1);

@@ -70,7 +70,7 @@ function economyTick() {
       if (v > cap) v = cap;
       r[k] = v;
     }
-    r.man = Math.min(c.manCap, r.man + c.manCap * 0.04 / 24);
+    r.man = Math.min(c.manCap, r.man + c.manCap * 0.06 / 24);
   }
 }
 const MAN_FRAC = 1;
@@ -243,7 +243,7 @@ function legAllowed(u, from, to) {
 }
 /* Dijkstra on the location graph for a unit. Returns array of locs (excluding start), or null */
 function findPath(u, from, to) {
-  if (to < 0 || to >= N || from < 0) return null;
+  if (!Number.isInteger(to) || !Number.isInteger(from) || to < 0 || to >= N || from < 0 || from >= N) return null;
   if (from === to) return [];
   const dom = UNITS[u.t].dom;
   const spd = ustat(u).spd;
@@ -378,6 +378,7 @@ function orderAir(ids, tgt, mission) {
     if (d.dom !== 'air') continue;
     if (u.st !== 'base' && u.st !== 'cargo') continue;
     if (u.hp < 35) continue;
+    if (mission === 'strike') { const to = tgt < P ? G.pv[tgt].o : -1; if (to >= 0 && !G.war[u.o * NC + to] && to !== u.o && !areAllied(u.o, to)) { fails.push('nowar'); continue; } }
     const bp = basePos(u); if (!bp) continue;
     const dd = Math.hypot(bp[0] - lx(tgt), bp[1] - ly(tgt));
     if (dd > d.rng) { fails.push('range'); continue; }
@@ -502,7 +503,7 @@ function missileImpact(u) {
     }
     if (pv && G.war[u.o * NC + owner]) pv.dmg = Math.min(100, pv.dmg + d.a.x * 0.3 * k * 0.5);
     if (pv) G.C[owner].dirty = true;
-    note(owner, 'attack', `Ракетный удар по ${locName(tgt)}!`, tgt);
+    note(owner, 'attack', `Ракетный удар (${G.C[u.o].n}) по ${locName(tgt)}!`, tgt);
   }
   killUnit(u);
 }
@@ -686,8 +687,8 @@ function captureProv(p, by) {
   O.dirty = X.dirty = true;
   O.stats.lost++; X.stats.taken++;
   G.wlost[old * NC + by]++;
-  X.res.cash += pv.cashBase * 6;
-  news('capture', `${X.n} захватила ${PROV[p].name} (${O.n})`, p, [by, old], (inv(by) || inv(old)) ? 'p' : '');
+  const loot = Math.round(pv.cashBase * 6); X.res.cash += loot;
+  news('capture', `${X.n} захватила ${PROV[p].name} (${O.n}) · трофеи 💵${loot}`, p, [by, old], (inv(by) || inv(old)) ? 'p' : '');
   if (p === O.cap) { news('capital', `${O.n} потеряла столицу ${PROV[p].name}!`, p, [old, by], 'g'); pickCapital(O); }
   if (!O.provs.length) eliminate(old, by);
 }
@@ -772,7 +773,7 @@ function scoreOf(c) {
   let tech = 0; for (const k in C.techs) tech += C.techs[k]; for (const k in C.gen) tech += C.gen[k] * 0.5;
   return Math.round(C.provs.length * 12 + C.vp * 45 + (C.stats.kills || 0) * 3 - (C.stats.losses || 0) + (C.inc.pop || 0) / 1e6 * 1.5 + (C.pwr || 0) * 0.04 + tech * 6 + (C.inc.cash || 0) * 0.15 + (C.stats.taken || 0) * 20);
 }
-function rankOf(c) { const s = scoreOf(c); let r = 1; for (const o of G.C) if (o.alive && o.id !== c && scoreOf(o.id) > s) r++; return r; }
+function rankOf(c) { if (!G.C[c].alive) return G.C.filter(o => o.alive).length + 1; const s = scoreOf(c); let r = 1; for (const o of G.C) if (o.alive && o.id !== c && scoreOf(o.id) > s) r++; return r; }
 const GOALS = [
   { id: 'build', t: 'Постройте или улучшите здание', f: C => (C.stats.built || 0) >= 1 },
   { id: 'queue', t: 'Закажите 3 военных юнита', f: C => (C.stats.queued || 0) >= 3 },
@@ -784,8 +785,8 @@ const GOALS = [
   { id: 'cap1', t: 'Захватите первую провинцию', f: C => (C.stats.taken || 0) >= 1 },
   { id: 'units20', t: 'Произведите 10 новых юнитов', f: C => (C.stats.trained || 0) >= 10 },
   { id: 'cap5', t: 'Захватите 5 провинций', f: C => (C.stats.taken || 0) >= 5 },
-  { id: 'vp10', t: 'Наберите 10 победных очков ★', f: C => C.vp >= 10 },
-  { id: 'rank3', t: 'Войдите в тройку лучших держав мира', f: C => rankOf(C.id) <= 3 },
+  { id: 'vp10', t: 'Увеличьте число победных очков ★ на 3', f: C => C.vp >= (G.vp0 || C.vp) + 3 },
+  { id: 'rank3', t: 'Войдите в тройку лучших держав мира', f: C => G.hour > 240 && rankOf(C.id) <= 3 },
 ];
 function checkGoals() {
   G.goalsDone = G.goalsDone || [];

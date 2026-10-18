@@ -246,9 +246,15 @@ window.actModal = function (a, d, el, e) {
     case 'wsort': UI.wsort = d.s; renderModal(true); break;
     case 'research': { const err = startResearch(G.player, d.k, d.id, +d.l); if (err) toast(err, 'war'); else Snd.play('ok'); renderModal(true); break; }
     case 'selunitsT': { const ids = []; for (const [, u] of G.U) if (u.o === G.player && u.t === d.t) ids.push(u.id); closeModal(); selectUnits(ids, false); break; }
-    case 'dsel': UI.dc = +d.c; UI.dmsg = ''; renderModal(true); break;
+    case 'dsel': UI.warConfirm = -1; UI.dc = +d.c; UI.dmsg = ''; renderModal(true); break;
     case 'dfilter': UI.dfilter = d.f; renderModal(true); break;
-    case 'dwar': { const r = declareWar(G.player, UI.dc); if (r) dmsg(r, true); else { dmsg('Война объявлена!'); Snd.play('war'); } break; }
+    case 'dwar': {
+      if (UI.warConfirm !== UI.dc) {
+        const pw = previewWar(G.player, UI.dc); UI.warConfirm = UI.dc;
+        dmsg(`Подтвердите объявление войны. Вероятно вступят ПРОТИВ вас: ${pw.against.map(m => G.C[m].n).join(', ') || 'никто'}. ЗА вас (возможно): ${pw.withUs.map(m => G.C[m].n).join(', ') || 'никто'}. Нажмите «Объявить войну» ещё раз.`, true); break;
+      }
+      UI.warConfirm = -1; const r = declareWar(G.player, UI.dc); if (r) dmsg(r, true); else { dmsg('Война объявлена!'); Snd.play('war'); } break;
+    }
     case 'dpeace': { const r = proposePeace(G.player, UI.dc); if (r.ok) dmsg('Мир заключён!'); else dmsg(r.why || 'Отказ', true); break; }
     case 'daccess': { const r = requestAccess(G.player, UI.dc); dmsg(r.ok ? 'Доступ предоставлен — ваши войска могут проходить через их территорию' : r.why, !r.ok); break; }
     case 'dgift': { const res = $('giftres').value, q = +$('giftqty').value; if (giveGift(G.player, UI.dc, res, q)) dmsg('Подарок отправлен, отношения улучшились'); else dmsg('Не хватает ресурсов', true); break; }

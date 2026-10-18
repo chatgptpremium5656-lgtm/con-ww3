@@ -19,3 +19,4 @@ console.log(G.news.filter(n=>n.f==='g').slice(-15).map(n=>'d'+Math.floor(n.h/24)
 const s=E.saveGame();console.log('save bytes',s.length);E.loadGame(s);for(let i=0;i<48;i++)E.tick();console.log('load ok hour',E.G.hour);
 {const c=E.G.C[E.cidx['POL']];console.log('POL use',JSON.stringify(c.use),'short',JSON.stringify(c.short),'inc.fuel',c.inc.fuel);}
 {const c=E.G.C[E.cidx['POL']];console.log('POL res',JSON.stringify(c.res));}
+console.log('peace news',E.G.news.filter(n=>n.t==='peace').length,'nukes',E.G.stats.nukes);

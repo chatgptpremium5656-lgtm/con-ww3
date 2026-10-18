@@ -36,7 +36,7 @@ function showStart() {
     <h3 style="margin:6px 0 0">Победа: <span id="winv">${UI.start.win}</span>% победных очков</h3>
     <input type="range" min="25" max="80" value="${UI.start.win}" oninput="UI.start.win=+this.value;$('winv').textContent=this.value">
     <button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
-    ${hasAuto ? '<button class="btn" data-act="loadauto">📂 Продолжить с автосохранения</button>' : ''}
+    ${hasAuto ? '<button class="btn" data-act="loadauto">📂 Продолжить с автосохранения</button>' : ''}${[1, 2, 3].map(n => { const mi = slotInfo(n); return mi ? `<button class="btn" data-act="loadstart" data-n="${n}">📂 Слот ${n}: ${esc(mi.t)}</button>` : ''; }).join('')}
     <div class="note">Управление: ЛКМ — выбор, ПКМ — приказ, колесо — масштаб, Пробел — пауза. На телефоне: щипок, долгое нажатие — приказ.</div>
   </div>`;
   renderStartList();
@@ -69,9 +69,10 @@ window.actStart = function (a, d) {
   if (a === 'opt') { UI.start[d.g] = d.v; const row = document.querySelectorAll(`[data-g="${d.g}"]`); row.forEach(b => b.classList.toggle('on', b.dataset.v === d.v)); }
   else if (a === 'startselect') window.startSelect(+d.c);
   else if (a === 'startgo') startNew();
+  else if (a === 'loadstart') { doLoad('conww3_s' + d.n); }
   else if (a === 'loadauto') { if (doLoad('conww3_auto')) { /* afterLoad handles UI */ } }
 };
-const _act = act; act = function (a, d, el, e) { if (['opt', 'startselect', 'startgo', 'loadauto'].includes(a)) return window.actStart(a, d); return _act(a, d, el, e); };
+const _act = act; act = function (a, d, el, e) { if (['opt', 'startselect', 'startgo', 'loadauto', 'loadstart'].includes(a)) return window.actStart(a, d); return _act(a, d, el, e); };
 
 function startNew() {
   const o = UI.start;
@@ -104,7 +105,7 @@ function afterLoad() {
 function showOver() {
   overShown = true; G.paused = true;
   const d = document.createElement('div'); d.className = 'over';
-  d.innerHTML = `<h1 style="color:${G.over.win ? '#5fd35f' : '#e0503c'}">${G.over.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}</h1><p style="font-size:17px;max-width:600px">${esc(G.over.text)}</p><p class="note">${dateStr(G.hour)} · ${G.C[G.player].n}</p><p style="font-size:18px">🏆 Итоговый счёт: <b>${fmt(scoreOf(G.player))}</b> · место в мире: <b>${rankOf(G.player)}</b> из ${G.C.filter(c => c.alive).length}</p><div class="row">${G.over.win ? '<button class="btn pri" id="ovc">Продолжить игру</button>' : ''}<button class="btn" id="ovn">Новая игра</button></div>`;
+  d.innerHTML = `<h1 style="color:${G.over.win ? '#5fd35f' : '#e0503c'}">${G.over.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}</h1><p style="font-size:17px;max-width:600px">${esc(G.over.text)}</p><p class="note">${dateStr(G.hour)} · ${G.C[G.player].n}</p><p style="font-size:18px">🏆 Итоговый счёт: <b>${fmt(scoreOf(G.player))}</b> · место в мире: <b>${rankOf(G.player)}</b> из ${G.C.filter(c => c.alive).length + (G.C[G.player].alive ? 0 : 1)}</p><div class="row">${G.over.win ? '<button class="btn pri" id="ovc">Продолжить игру</button>' : ''}<button class="btn" id="ovn">Новая игра</button></div>`;
   document.body.appendChild(d);
   const c = d.querySelector('#ovc'); if (c) c.onclick = () => { G.over = null; G.opts.win = 5; d.remove(); G.paused = false; overShown = false; };
   d.querySelector('#ovn').onclick = () => { d.remove(); showStart(); };
@@ -122,7 +123,7 @@ function loop(t) {
   }
   if (t - UI.last > 260) { UI.last = t; refreshHUD(); }
   if (G.over && !overShown) showOver();
-  if (G.hour - lastAutoHour >= 24 * 8 && !G.paused) { lastAutoHour = G.hour; try { localStorage.setItem('conww3_auto', saveGame()); } catch (e) { } }
+  if (G.hour - lastAutoHour >= 24 * 8 && !G.paused) { lastAutoHour = G.hour; try { localStorage.setItem('conww3_auto', saveGame()); } catch (e) { if (!UI.autoWarn) { UI.autoWarn = 1; toast('Автосохранение не удалось: хранилище браузера заполнено. Удалите старые слоты в меню.', 'war'); } } }
 }
 
 window.addEventListener('load', () => {

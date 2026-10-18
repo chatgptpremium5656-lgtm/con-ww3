@@ -123,10 +123,10 @@ function aiDiplomacy(C) {
   // seek peace in AI-vs-AI wars
   for (const e of warsOf(C.id)) {
     const E = G.C[e]; if (!E.ai) { if (aiPeaceEval(C.id, e).ok && R() < 0.5) news('peaceoffer', `🕊 ${C.n} готова обсудить мир с вами (Дипломатия → Предложить мир)`, C.cap, [C.id, e], 'p'); continue; }
-    if (aiPeaceEval(e, C.id).ok && aiPeaceEval(C.id, e).ok) makePeace(C.id, e);
+    if ((G.hour - G.warStart[C.id * NC + e]) > 24 * 10 && (aiPeaceEval(e, C.id).ok || aiPeaceEval(C.id, e).ok)) makePeace(C.id, e);
   }
   const wars = warsOf(C.id);
-  if (G.hour < 24 * 6) return;
+  if (G.hour < 24 * (G.opts.scenario === 'cold' ? 20 : 6)) return;
   if (wars.length >= (C.agg >= 4 ? 3 : C.agg >= 2 ? 2 : 1)) return;
   const myPow = alliancePower(C.id);
   if (myPow < 1) return;
@@ -167,12 +167,15 @@ function aiMilitary(C) {
   const my = unitsOf(C.id);
   const land = my.filter(u => UNITS[u.t].dom === 'land' && u.st === 'idle');
   const grace = G.hour < 24 * 8;
-  aiLand(C, enemies, land, my, grace);
+  const pace = DIFF[G.opts.diff].pace || 1;
+  const vsPlayer = enemies.includes(G.player);
+  const slow = vsPlayer && R() > pace;
+  aiLand(C, enemies, land, my, grace || slow);
   if (grace) return;
   aiSpies(C, enemies);
-  aiAir(C, enemies, my);
-  aiNavy(C, enemies, my);
-  aiMissiles(C, enemies, my);
+  const fresh = e => e === G.player && G.hour - G.warStart[C.id * NC + e] < 48;
+  const hot = enemies.filter(e => !fresh(e));
+  if (hot.length) { if (!slow) aiAir(C, hot, my); aiNavy(C, enemies, my); aiMissiles(C, hot, my); }
 }
 function aiLand(C, enemies, land, my, grace) {
   if (!land.length) return;
@@ -334,11 +337,14 @@ function aiMissiles(C, enemies, my) {
       const fanatic = C.agg >= 5 && G.hour > 24 * 150 && R() < 0.0015;
       if (nuker < 0 && !desperate && !fanatic) continue;
       if (nuker < 0 && G.lastAINuke && G.hour - G.lastAINuke < 48) continue;
+      G.nukeLog = G.nukeLog || [];
+      if (G.nukeLog.filter(h => G.hour - h < 96).length >= 3) continue;
+      if (nuker < 0 && G.nukeLog.filter(h => G.hour - h < 24 * 30).length >= 3) continue;
       if (nuker >= 0 && !G.war[C.id * NC + nuker]) { if (G.C[nuker].alive) declareWar(C.id, nuker); else continue; }
       let best = -1, bs = -1;
       const pool = nuker >= 0 ? [nuker] : enemies;
       for (const e of pool) for (const p of G.C[e].provs) { if (dist(u.loc, p) > d.rng) continue; if (!G.war[C.id * NC + e]) continue; const sc = provValue(C.id, p) + (G.C[e].cap === p ? 6 : 0) + G.at[p].length * 0.3; if (sc > bs) { bs = sc; best = p; } }
-      if (best >= 0 && fireMissile([u.id], best)) { fired++; if (nuker < 0) G.lastAINuke = G.hour; if (fired >= 2) break; }
+      if (best >= 0 && fireMissile([u.id], best)) { fired++; G.nukeLog.push(G.hour); if (nuker < 0) G.lastAINuke = G.hour; if (fired >= 2) break; }
     } else {
       let best = -1, bs = 0.5;
       for (const e of enemies) for (const p of G.C[e].provs) {

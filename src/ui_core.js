@@ -95,11 +95,11 @@ function issueOrder(hit, mode) {
     const m = mode === 'rebase' ? 'rebase' : mode === 'patrol' ? 'patrol' : mode === 'strike' ? 'strike' : (hostileLoc(loc) ? 'strike' : (friendlyBase ? 'rebase' : 'patrol'));
     const r = orderAir(air, loc, m);
     if (r.n) msgs.push(`${r.n} самолётов: ${m === 'strike' ? 'удар' : m === 'rebase' ? 'перебазирование' : 'патруль'} → ${locName(loc)}`);
-    if (r.fails.length) msgs.push(r.fails.includes('range') ? 'Цель вне радиуса действия' : 'База повреждена');
+    if (r.fails.length) msgs.push(r.fails.includes('range') ? 'Цель вне радиуса действия' : r.fails.includes('nowar') ? 'Удар возможен только по стране, с которой вы воюете' : 'База повреждена');
   }
   if (msl.length && (!mode || mode === 'fire' || mode === 'strike' || mode === 'move')) {
     const n = fireMissile(msl, loc);
-    msgs.push(n ? `Пуск ракет: ${n} → ${locName(loc)}` : 'Пуск невозможен (нет войны с владельцем, или вне дальности)');
+    msgs.push(n ? `Пуск ракет: ${n} → ${locName(loc)}` : (loc < P && !G.war[G.player * NC + G.pv[loc].o] ? 'Пуск невозможен: нет войны с владельцем провинции' : 'Пуск невозможен: цель вне дальности'));
   }
   if (msgs.length) toast(msgs.join('. '), 'good'); Snd.play('ok');
   setMode(null); renderUnitPanel(); MV.dirty = true;
@@ -219,7 +219,7 @@ function refreshHUD(force) {
   $('tb-time').innerHTML = `<b>${dateStr(G.hour)}</b><br><small>${timeStr(G.hour)} · ${G.paused ? 'ПАУЗА' : 'x' + G.speed}</small>`;
   let h = '';
   for (const k of [...RES, 'man']) {
-    const inc = k === 'man' ? C.manCap * 0.04 : (C.inc[k] || 0), use = k === 'man' ? 0 : (C.use[k] || 0), net = inc - use;
+    const inc = k === 'man' ? C.manCap * 0.06 : (C.inc[k] || 0), use = k === 'man' ? 0 : (C.use[k] || 0), net = inc - use;
     const cap = k === 'man' ? ' / ' + fmt(C.manCap) : '';
     const tip = `<b>${RES_INFO[k].n}</b><br>Доход: +${fmt(inc)}/сут<br>Расход: −${fmt(use)}/сут<br>Баланс: ${net >= 0 ? '+' : ''}${fmt(net)}/сут${k === 'man' ? '<br>Максимум: ' + fmt(C.manCap) : ''}${C.short[k] ? '<br><span style="color:#e0503c">ДЕФИЦИТ! Войска теряют боеспособность</span>' : ''}`;
     h += `<div class="rchip ${C.short[k] ? 'low' : ''}" data-act="modal" data-m="market" data-tip='${tip.replace(/'/g, '&#39;')}'><span style="font-size:16px">${RES_INFO[k].i}</span><div><div class="v">${fmt(C.res[k])}${cap ? '<small style="font-weight:400;color:#8fa6bd">' + cap + '</small>' : ''}</div><div class="d ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : ''}${fmt(net)}</div></div></div>`;
@@ -245,7 +245,7 @@ function refreshHUD(force) {
   const bell = $('bell'); if (UI.unseen > 0) { bell.textContent = UI.unseen > 99 ? '99+' : UI.unseen; bell.classList.remove('hidden'); } else bell.classList.add('hidden');
   if (UI.modal === 'events') { UI.unseen = 0; bell.classList.add('hidden'); }
   { const done = G.goalsDone || []; const todo = GOALS.filter(g => !done.includes(g.id)).slice(0, 3);
-    const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Место в мире: ${rankOf(G.player)} · очки ${fmt(scoreOf(G.player))}</div>`;
+    const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Рейтинг: ${rankOf(G.player)}-е место, ${fmt(scoreOf(G.player))} очков</div><div class="note">★ Победа: ${G.myVP || 0} / ${Math.ceil(G.totalVP * G.opts.win)} ПО (${Math.round((G.myVP || 0) / G.totalVP * 100)}% из ${Math.round(G.opts.win * 100)}%)</div>`;
     if (UI._goalsH !== html) { gp.innerHTML = html; UI._goalsH = html; } }
   renderProvPanel(force); renderUnitPanel(force);
   if (UI.modal && (!document.activeElement || !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) renderModal(true);
@@ -388,7 +388,7 @@ function stName(g) {
 /* ---- act dispatcher ---- */
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
-  if (!G && !['startgo', 'startselect', 'continue', 'opt', 'loadauto'].includes(el.dataset.act)) return;
+  if (!G && !['startgo', 'startselect', 'continue', 'opt', 'loadauto', 'loadstart'].includes(el.dataset.act)) return;
   const d = el.dataset; Snd.play('click');
   act(d.act, d, el, e);
   if (el.tagName === 'BUTTON' && el.blur) el.blur();
