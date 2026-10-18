@@ -66,7 +66,7 @@ function selectUnits(ids, add) {
 function setMode(m) {
   UI.mode = m; MV.orderMode = m; $('map').classList.toggle('order', !!m);
   const h = $('order-hint');
-  if (m) { h.textContent = { move: 'Выберите пункт назначения', strike: 'Выберите цель для удара', patrol: 'Выберите зону патрулирования', fire: 'Выберите цель для ракетного удара' }[m] + ' (Esc — отмена)'; h.classList.remove('hidden'); } else h.classList.add('hidden');
+  if (m) { h.textContent = { move: 'Выберите пункт назначения', rebase: 'Выберите аэродром для перебазирования', strike: 'Выберите цель для удара', patrol: 'Выберите зону патрулирования', fire: 'Выберите цель для ракетного удара' }[m] + ' (Esc — отмена)'; h.classList.remove('hidden'); } else h.classList.add('hidden');
   MV.dirty = true;
 }
 
@@ -90,10 +90,11 @@ function issueOrder(hit, mode) {
     let dest = loc; if (hit.k === 'p' && !isCoastal(loc)) dest = -1;
     if (dest < 0) msgs.push('Корабли не могут зайти вглубь суши'); else { const r = orderMove(sea, dest); if (r.n) msgs.push(`${r.n} кораблей → ${locName(dest)}`); if (r.fail) msgs.push(`${r.fail} кораблей: нет маршрута`); }
   }
-  if (air.length && (!mode || mode === 'strike' || mode === 'patrol' || mode === 'move')) {
-    const m = mode === 'patrol' ? 'patrol' : mode === 'strike' ? 'strike' : (hostileLoc(loc) ? 'strike' : 'patrol');
+  if (air.length && (!mode || mode === 'strike' || mode === 'patrol' || mode === 'move' || mode === 'rebase')) {
+    const friendlyBase = loc < P && G.pv[loc].b.airfield > 0 && (G.pv[loc].o === G.player || areAllied(G.pv[loc].o, G.player)) && !hostileLoc(loc);
+    const m = mode === 'rebase' ? 'rebase' : mode === 'patrol' ? 'patrol' : mode === 'strike' ? 'strike' : (hostileLoc(loc) ? 'strike' : (friendlyBase ? 'rebase' : 'patrol'));
     const r = orderAir(air, loc, m);
-    if (r.n) msgs.push(`${r.n} самолётов: ${m === 'strike' ? 'удар' : 'патруль'} → ${locName(loc)}`);
+    if (r.n) msgs.push(`${r.n} самолётов: ${m === 'strike' ? 'удар' : m === 'rebase' ? 'перебазирование' : 'патруль'} → ${locName(loc)}`);
     if (r.fails.length) msgs.push(r.fails.includes('range') ? 'Цель вне радиуса действия' : 'База повреждена');
   }
   if (msl.length && (!mode || mode === 'fire' || mode === 'strike' || mode === 'move')) {
@@ -260,7 +261,7 @@ function renderProvPanel(force) {
     h += `</div>`;
   } else {
     h += `<div class="note" style="margin-top:5px">Отношения: ${Math.round(relOf(G.player, pv.o))}${G.war[G.player * NC + pv.o] ? ' · <b style="color:#e0503c">ВОЙНА</b>' : ''}</div>`;
-    h += `<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap"><button class="btn sm" data-act="dipl" data-c="${pv.o}">🤝 Дипломатия</button></div>`;
+    h += `<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap"><button class="btn sm" data-act="dipl" data-c="${pv.o}">🤝 Дипломатия</button>${G.war[G.player * NC + pv.o] ? `<button class="btn sm danger" data-act="cyber" data-p="${p}" data-tip="Кибератака: парализует производство и добычу на 36 ч<br>💻 40 электроники · нужна технология «Электроника»">💻 Кибератака</button>` : ''}</div>`;
   }
   h += `</div>`;
   // buildings
@@ -350,7 +351,7 @@ function renderUnitPanel(force) {
   const doms = new Set(us.map(u => UNITS[u.t].dom));
   const mv = doms.has('land') || doms.has('sea'), air = doms.has('air'), msl = doms.has('msl');
   if (mv) h += `<button class="btn ${UI.mode === 'move' ? 'pri' : ''}" data-act="mode" data-m="move" data-tip="Выберите цель на карте (или ПКМ) · R">➜ Идти</button><button class="btn" data-act="stop">⏹ Стоп</button>`;
-  if (air) h += `<button class="btn ${UI.mode === 'strike' ? 'pri' : ''}" data-act="mode" data-m="strike" data-tip="Бомбардировка/атака цели · B">💥 Удар</button><button class="btn ${UI.mode === 'patrol' ? 'pri' : ''}" data-act="mode" data-m="patrol" data-tip="Патрулирование зоны · P">🛩 Патруль</button><button class="btn" data-act="recall">↩ Вернуть на базу</button>`;
+  if (air) h += `<button class="btn ${UI.mode === 'strike' ? 'pri' : ''}" data-act="mode" data-m="strike" data-tip="Бомбардировка/атака цели · B">💥 Удар</button><button class="btn ${UI.mode === 'patrol' ? 'pri' : ''}" data-act="mode" data-m="patrol" data-tip="Патрулирование зоны · P">🛩 Патруль</button><button class="btn ${UI.mode === 'rebase' ? 'pri' : ''}" data-act="mode" data-m="rebase" data-tip="Перебазировать на другой аэродром">🛬 Перебазировать</button><button class="btn" data-act="recall">↩ Вернуть на базу</button>`;
   if (msl) h += `<button class="btn ${UI.mode === 'fire' ? 'pri' : ''} danger" data-act="mode" data-m="fire" data-tip="Выбрать цель пуска · F">🚀 Пуск</button>`;
   const hasTr = us.some(u => u.t === 'transport'), hasCar = us.some(u => u.t === 'carrier'), hasLand = us.some(u => UNITS[u.t].dom === 'land'), hasAir = us.some(u => UNITS[u.t].dom === 'air');
   if (hasTr) h += `<button class="btn" data-act="loadtr" data-tip="Загрузить сухопутные части из этой провинции на выбранные транспорты">📦 Грузить</button><button class="btn" data-act="unloadtr">⬇ Высадить</button>`;
@@ -371,6 +372,7 @@ document.addEventListener('click', e => {
   if (!G && !['startgo', 'startselect', 'continue', 'opt', 'loadauto'].includes(el.dataset.act)) return;
   const d = el.dataset; Snd.play('click');
   act(d.act, d, el, e);
+  if (el.tagName === 'BUTTON' && el.blur) el.blur();
 });
 function act(a, d, el, e) {
   switch (a) {
@@ -392,6 +394,7 @@ function act(a, d, el, e) {
     case 'mapmode': MV.mode = d.m; updateModeBtns(); MV.dirty = true; miniDirty = true; break;
     case 'mapmodes': openModal('layers'); break;
     case 'upgrade': { const r = upgradeUnits([...SEL.units]); toast(r.n ? `Модернизировано: ${r.n}` + (r.fail ? `, не хватило ресурсов: ${r.fail}` : '') : 'Не хватает ресурсов', r.n ? 'good' : 'war'); UI._up = ''; renderUnitPanel(); break; }
+    case 'cyber': { const err = cyberAttack(G.player, +d.p); if (err) toast(err, 'war'); else { toast('Кибератака успешна', 'good'); Snd.play('ok'); } renderProvPanel(true); break; }
     case 'loadtr': {
       const trs = [...SEL.units].map(id => G.U.get(id)).filter(u => u && u.t === 'transport');
       let n = 0; for (const t of trs) { const cand = unitsAt(t.loc).filter(u => u.o === G.player && UNITS[u.t].dom === 'land' && u.st === 'idle').map(u => u.id); n += loadOnTransport(t.id, cand); }

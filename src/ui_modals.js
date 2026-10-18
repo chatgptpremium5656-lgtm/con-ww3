@@ -175,7 +175,7 @@ function marketHTML() {
 function eventsHTML(tab) {
   const list = G.news.filter(n => tab === 'all' ? (n.f === 'g' || n.f === 'p') : (n.f === 'p' || n.c.includes(G.player))).slice(-150).reverse();
   if (!list.length) return '<div class="note">Пока ничего не произошло.</div>';
-  const ico = { war: '⚔', peace: '🕊', nuke: '☢', capture: '🚩', loss: '💀', build: '🏗', unit: '🪖', research: '🔬', elim: '☠', capital: '⭐', defense: '🛡', attack: '💥', alliance: '🤝', join: '➕', land: '⚓' };
+  const ico = { war: '⚔', peace: '🕊', nuke: '☢', capture: '🚩', loss: '💀', build: '🏗', unit: '🪖', research: '🔬', elim: '☠', capital: '⭐', defense: '🛡', cyber: '💻', peaceoffer: '🕊', warn: '⚠', attack: '💥', alliance: '🤝', join: '➕', land: '⚓' };
   return `<table class="t">${list.map(n => `<tr data-act="focus" data-l="${n.l}" style="cursor:pointer"><td style="width:110px;color:var(--tx2)">${dateStr(n.h)} ${timeStr(n.h)}</td><td style="width:26px">${ico[n.t] || '•'}</td><td>${esc(n.x)}</td></tr>`).join('')}</table>`;
 }
 
@@ -257,7 +257,7 @@ window.actModal = function (a, d, el, e) {
     case 'trade': { const err = trade(G.player, d.r, +d.q, d.b === '1'); if (err) toast(err, 'war'); else Snd.play('ok'); renderModal(true); break; }
     case 'save': doSave(+d.n); renderModal(true); break;
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;
-    case 'tutgo': closeModal(); G.paused = false; G.speed = 1; updateSpeedBtns(); break;
+    case 'tutgo': closeModal(); G.paused = false; G.speed = 2; updateSpeedBtns(); break;
     case 'optsound': UI.sound = el.checked; break;
     case 'optlabels': MV.labels = el.checked; MV.dirty = true; break;
     case 'optfog': G.fogOff = !el.checked; updateVis(true); MV.dirty = true; break;

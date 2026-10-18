@@ -80,6 +80,7 @@ function productionTick() {
   for (let i = 0; i < P; i++) {
     const pv = G.pv[i], c = G.C[pv.o];
     if (!c.alive) continue;
+    if (pv.cyber > G.hour) continue;
     if (pv.bq) {
       pv.bq.left -= 1 + 0.1 * (c.techs.infra || 0);
       if (pv.bq.left <= 0) {
@@ -207,6 +208,19 @@ function upgradeUnits(ids) {
     pay(u.o, cost); u.g = G.C[u.o].gen[u.t]; n++;
   }
   return { n, fail };
+}
+
+function cyberAttack(by, p) {
+  const B = G.C[by], pv = G.pv[p];
+  if (!G.war[by * NC + pv.o]) return 'Нужна война с владельцем провинции';
+  if ((B.techs.elect || 0) < 1) return 'Нужна технология «Электроника» ур.1';
+  if (B.res.elec < 40) return 'Нужно 40 💻 электроники';
+  if (B.cyberCd > G.hour) return 'Кибер-подразделение перезаряжается';
+  B.res.elec -= 40; B.cyberCd = G.hour + 12; pv.cyber = G.hour + 36; G.C[pv.o].dirty = true;
+  note(pv.o, 'attack', `💻 Кибератака на ${PROV[p].name}: производство парализовано на 36 ч`, p);
+  news('cyber', `💻 ${B.n} провела кибератаку на ${PROV[p].name}`, p, [by, pv.o], inv(by) || inv(pv.o) ? 'p' : '');
+  G.fx.push({ t: 'int', x: lx(p), y: ly(p), h: G.hour });
+  return '';
 }
 
 /* ---------- movement ---------- */
@@ -418,6 +432,12 @@ function flightTick() {
       if (u.fl.done >= u.fl.d) {
         if (st === 'out') {
           if (d.dom === 'msl') { missileImpact(u); continue; }
+          if (u.mission === 'rebase') {
+            const pt = u.tgt;
+            if (pt < P && G.pv[pt].b.airfield > 0 && (G.pv[pt].o === u.o || areAllied(u.o, G.pv[pt].o)) && basedAir(pt) < airCapacity(pt)) { u.bs = pt; u.loc = pt; u.st = 'base'; G.at[pt].push(u.id); u.fuel = d.fuel; note(u.o, 'unit', `Авиация перебазирована: ${PROV[pt].name}`, pt); }
+            else returnToBase(u);
+            continue;
+          }
           const to = u.tgt < P ? G.pv[u.tgt].o : -1;
           u.loc = u.tgt; u.st = u.mission; u.rounds = 0; G.at[u.loc].push(u.id);
           if (to >= 0 && !G.war[u.o * NC + to] && to !== u.o && !areAllied(u.o, to) && u.mission === 'strike') returnToBase(u);

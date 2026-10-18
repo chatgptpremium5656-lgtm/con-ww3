@@ -297,7 +297,7 @@ function provProd(c, p, out) {
   let occ = 1;
   if (pv.since > -9000) { const days = (G.hour - pv.since) / 24; occ = 0.35 + 0.65 * Math.min(1, days / 25); }
   const dmg = 1 - pv.dmg / 100 * 0.75, fall = 1 - Math.min(0.9, pv.fall);
-  const m = eco * inf * occ * dmg * fall;
+  const m = eco * inf * occ * dmg * fall * (pv.cyber > G.hour ? 0.35 : 1);
   const r = pr.res.map(v => Math.min(5, v));
   out.food += FOOD_T[r[0]] * m * (1 + 0.1 * (t.agri || 0));
   out.comp += ORE_T[r[1]] * m * (1 + 0.1 * (t.mine || 0));

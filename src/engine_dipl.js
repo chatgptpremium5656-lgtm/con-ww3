@@ -170,7 +170,7 @@ function saveGame() {
   const o = {
     v: 1, opts: g.opts, seed: g.seed, rng: g.rng.get(), hour: g.hour, speed: g.speed, player: g.player, tension: g.tension, nextU: g.nextU, market: g.market, stats: g.stats, over: g.over,
     C: g.C.map(c => ({ alive: c.alive, cap: c.cap, res: c.res, techs: c.techs, gen: c.gen, rs: c.rs, alliance: c.alliance, foodScale: c.foodScale, stats: c.stats, provs: c.provs, ai: c.ai, ai_s: c.ai_s, pwr: c.pwr })),
-    pv: g.pv.map(p => ({ o: p.o, b: p.b, bq: p.bq, q: p.q, dmg: p.dmg, cap: p.cap, fall: p.fall, since: p.since, pop: p.pop })),
+    pv: g.pv.map(p => ({ o: p.o, b: p.b, bq: p.bq, q: p.q, dmg: p.dmg, cap: p.cap, fall: p.fall, since: p.since, pop: p.pop, cyber: p.cyber || 0 })),
     U: Array.from(g.U.values()),
     rel: sparse(g.rel), war: sparse(g.war), acc: sparse(g.acc), warStart: sparse(g.warStart), wlost: sparse(g.wlost), truce: g.truce ? sparse(g.truce) : null,
     al: g.al, news: g.news.slice(-80)
