@@ -279,9 +279,10 @@ function renderProvPanel(force) {
     h += `</div>`;
   } else {
     h += `<div class="note" style="margin-top:5px">Отношения: ${Math.round(relOf(G.player, pv.o))}${G.war[G.player * NC + pv.o] ? ' · <b style="color:#e0503c">ВОЙНА</b>' : ''}</div>`;
-    h += `<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap"><button class="btn sm" data-act="dipl" data-c="${pv.o}">🤝 Дипломатия</button>${G.war[G.player * NC + pv.o] ? `<button class="btn sm danger" data-act="cyber" data-p="${p}" data-tip="Кибератака: парализует производство и добычу на 36 ч<br>💻 40 электроники · нужна технология «Электроника»">💻 Кибератака</button>` : ''}</div>`;
+    h += `<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap"><button class="btn sm" data-act="dipl" data-c="${pv.o}">🤝 Дипломатия</button>${!areAllied(G.player, pv.o) ? ['intel', 'sabotage', 'corrupt'].map(m => `<button class="btn sm" data-act="spy" data-p="${p}" data-m="${m}" data-tip="<b>${SPY[m].n}</b><br>${SPY[m].d}<br>💵${SPY[m].cost} · ${SPY[m].t} ч<br>Агентов: ${spiesOf(G.player).length}/${spyCap(G.player)}">${SPY[m].i} ${SPY[m].n}</button>`).join('') : ''}${G.war[G.player * NC + pv.o] ? `<button class="btn sm danger" data-act="cyber" data-p="${p}" data-tip="Кибератака: парализует производство и добычу на 36 ч<br>💻 40 электроники · нужна технология «Электроника»">💻 Кибератака</button>` : ''}</div>`;
   }
   h += `</div>`;
+  { const my = G.spies.filter(s => s.o === G.player && s.loc === p); if (my.length) h += `<div class="note" style="margin-top:5px">🕵 Ваши агенты здесь: ${my.map(s => SPY[s.mission].i + (s.active ? '' : '…')).join(' ')}</div>`; if (me) h += `<div style="margin-top:5px"><button class="btn sm" data-act="spy" data-p="${p}" data-m="counter" data-tip="<b>Контрразведка</b><br>${SPY.counter.d}<br>💵${SPY.counter.cost}">🛡 Контрразведка</button></div>`; }
   // buildings
   h += `<div class="sec"><h4>Здания</h4><div class="bldgrid">`;
   for (const b of BLD_ORDER) {
@@ -300,7 +301,7 @@ function renderProvPanel(force) {
     h += `<div class="bld" data-tip="<b>${d.n}</b><br>${d.d}"><div class="t">${d.i} <span>${d.n.length > 14 ? d.n.slice(0, 13) + '…' : d.n}</span></div><div class="pips">${pips}</div>${bq}${go}</div>`;
   }
   h += `</div>`;
-  if (me && pv.bq) h += `<div class="q" style="margin-top:6px">🏗 ${BLD[pv.bq.b].n} → ур. ${pv.bq.lvl}<div class="bar"><i style="width:${Math.round((1 - pv.bq.left / pv.bq.total) * 100)}%"></i></div><span>${Math.ceil(pv.bq.left)} ч</span><button class="btn sm" data-act="cancelbuild" data-p="${p}">✕</button></div>`;
+  if (me && pv.bq) h += `<div class="q" style="margin-top:6px">🏗 ${BLD[pv.bq.b].n} → ур. ${pv.bq.lvl}<div class="bar"><i style="width:${Math.round((1 - pv.bq.left / pv.bq.total) * 100)}%"></i></div><span>${Math.ceil(pv.bq.left)} ч</span><button class="btn sm" data-act="speedup" data-k="build" data-p="${p}" data-tip="Ускорить за 💵${speedCost(p, 'build')}">⏩</button><button class="btn sm" data-act="cancelbuild" data-p="${p}">✕</button></div>`;
   h += `</div>`;
   // production
   if (me) {
@@ -312,13 +313,13 @@ function renderProvPanel(force) {
       h += `<div class="note" style="margin:4px 0 2px">${nm}</div><div class="ugrid">`;
       for (const t of list) {
         const d = UNITS[t], err = canQueue(p, t);
-        const tip = `<b>${d.n}</b> (пок. ${GEN_NAMES[G.C[pv.o].gen[t]]})<br>${d.desc}<br>${costText(d.cost)}<br>⏱ ${d.time} ч${err ? '<br><span style=\'color:#e0503c\'>' + esc(err) + '</span>' : ''}`;
-        h += `<button class="ubtn" data-act="queue" data-p="${p}" data-t="${t}" ${err ? 'disabled' : ''} data-tip="${tip.replace(/"/g, '&quot;')}">${unitIcon(t, '#fff', 22)}<div>${d.n}<small>${costHTMLplain(d.cost)}</small></div></button>`;
+        const tip = `<b>${d.n}</b> (пок. ${GEN_NAMES[G.C[pv.o].gen[t]]})<br>${d.desc}<br>${costText(Object.fromEntries(Object.entries(d.cost).map(([k, v]) => [k, v * unitMult(pv.o)])))}<br>⏱ ${d.time} ч${err ? '<br><span style=\'color:#e0503c\'>' + esc(err) + '</span>' : ''}`;
+        h += `<button class="ubtn" data-act="queue" data-p="${p}" data-t="${t}" ${err ? 'disabled' : ''} data-tip="${tip.replace(/"/g, '&quot;')}">${unitIcon(t, '#fff', 22)}<div>${d.n}<small>${costHTMLplain(d.cost, unitMult(pv.o))}</small></div></button>`;
       }
       h += `</div>`;
     }
     if (!UNIT_ORDER.some(t => pv.b[UNITS[t].req[0]] > 0)) h += `<div class="note">Постройте Казармы, Завод, Аэродром или Базу ВМФ, чтобы производить войска.</div>`;
-    if (pv.q.length) { h += `<div style="margin-top:6px">`; pv.q.forEach((it, i) => { h += `<div class="q">${unitIcon(it.t, '#fff', 18)}<span style="min-width:90px">${UNITS[it.t].n}</span><div class="bar"><i style="width:${Math.round((1 - it.left / it.total) * 100)}%"></i></div><span>${Math.ceil(it.left)}ч</span><button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}">✕</button></div>`; }); h += `</div>`; }
+    if (pv.q.length) { h += `<div style="margin-top:6px">`; pv.q.forEach((it, i) => { h += `<div class="q">${unitIcon(it.t, '#fff', 18)}<span style="min-width:90px">${UNITS[it.t].n}</span><div class="bar"><i style="width:${Math.round((1 - it.left / it.total) * 100)}%"></i></div><span>${Math.ceil(it.left)}ч</span>${i === 0 ? `<button class="btn sm" data-act="speedup" data-k="q" data-p="${p}" data-tip="Ускорить за 💵${speedCost(p, 'q', 0)}">⏩</button>` : ''}<button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}">✕</button></div>`; }); h += `</div>`; }
     h += `</div>`;
   }
   // units here
@@ -336,7 +337,7 @@ function renderProvPanel(force) {
   }
   el.innerHTML = h; el.scrollTop = scrollTop;
 }
-function costHTMLplain(cost) { return Object.keys(cost).slice(0, 4).map(k => RES_INFO[RES_SHORT[k]].i + fmt(cost[k])).join(' '); }
+function costHTMLplain(cost, m) { return Object.keys(cost).slice(0, 4).map(k => RES_INFO[RES_SHORT[k]].i + fmt(cost[k] * (m || 1))).join(' '); }
 function seaPanelHTML(s) {
   const loc = P + s; const us = unitsAt(loc);
   let h = `<div class="ph"><h3>${esc(SEA[s].name)}<small>Морская зона · соседних: ${SEA[s].adj.length}</small></h3><button class="x" data-act="closeprov">✕</button></div><div class="sec"><div class="note">Прибрежные провинции: ${SEA[s].ports.slice(0, 12).map(p => esc(PROV[p].name)).join(', ')}${SEA[s].ports.length > 12 ? '…' : ''}</div></div>`;
@@ -403,6 +404,8 @@ function act(a, d, el, e) {
     case 'stop': stopUnits([...SEL.units]); renderUnitPanel(); break;
     case 'recall': for (const id of SEL.units) { const u = G.U.get(id); if (u && (u.st === 'patrol' || u.st === 'strike')) returnToBase(u); } toast('Авиация возвращается на базы', 'good'); break;
     case 'build': { const err = startBuild(+d.p, d.b); if (err) toast(err, 'war'); else Snd.play('ok'); renderProvPanel(true); break; }
+    case 'speedup': { const err = speedUp(+d.p, d.k, 0); if (err) toast(err, 'war'); else Snd.play('ok'); renderProvPanel(true); break; }
+    case 'spy': { const err = sendSpy(G.player, +d.p, d.m); if (err) toast(err, 'war'); else { toast(`Агент отправлен: ${SPY[d.m].n}`, 'good'); Snd.play('ok'); } renderProvPanel(true); break; }
     case 'cancelbuild': cancelBuild(+d.p); renderProvPanel(true); break;
     case 'queue': { const err = queueUnit(+d.p, d.t); if (err) toast(err, 'war'); renderProvPanel(true); break; }
     case 'cancelq': cancelQueue(+d.p, +d.i); renderProvPanel(true); break;

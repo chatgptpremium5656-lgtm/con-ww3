@@ -169,6 +169,7 @@ function aiMilitary(C) {
   const grace = G.hour < 24 * 8;
   aiLand(C, enemies, land, my, grace);
   if (grace) return;
+  aiSpies(C, enemies);
   aiAir(C, enemies, my);
   aiNavy(C, enemies, my);
   aiMissiles(C, enemies, my);
@@ -330,7 +331,7 @@ function aiMissiles(C, enemies, my) {
       const hits = G.news.filter(n => n.t === 'nuke' && n.c.length > 1 && G.hour - n.h < 24 * 8 && n.c[0] !== C.id && (n.c[1] === C.id || areAllied(n.c[1], C.id)) && !areAllied(n.c[0], C.id));
       const nuker = hits.length ? hits[hits.length - 1].c[0] : -1;
       const desperate = G.pv[C.cap].cap && G.pv[C.cap].cap.prog > 55 && C.agg >= 3 && G.hour > 24 * 14;
-      const fanatic = C.agg >= 5 && G.hour > 24 * 90 && R() < 0.004;
+      const fanatic = C.agg >= 5 && G.hour > 24 * 150 && R() < 0.0015;
       if (nuker < 0 && !desperate && !fanatic) continue;
       if (nuker < 0 && G.lastAINuke && G.hour - G.lastAINuke < 48) continue;
       if (nuker >= 0 && !G.war[C.id * NC + nuker]) { if (G.C[nuker].alive) declareWar(C.id, nuker); else continue; }
@@ -361,4 +362,11 @@ function aiTrade(C) {
       if (qty > 5) trade(C.id, k, Math.floor(qty), true);
     }
   }
+}
+
+function aiSpies(C, enemies) {
+  if (R() > 0.12 || C.res.cash < 600 || spiesOf(C.id).length >= spyCap(C.id)) return;
+  const e = pick(enemies); const ps = G.C[e].provs.filter(p => G.pv[p].b.factory || G.pv[p].b.airfield || G.pv[p].b.naval);
+  if (!ps.length) return;
+  sendSpy(C.id, pick(ps), R() < 0.6 ? 'sabotage' : 'corrupt');
 }

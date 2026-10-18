@@ -1,7 +1,7 @@
 'use strict';
 /* ===== Modal windows ===== */
 const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты', tutorial: '🎖 Добро пожаловать, командующий' };
-const TABS = { overview: [['country', 'Моя страна'], ['world', 'Страны мира'], ['wars', 'Войны'], ['victory', 'Победа']], army: [['units', 'Войска'], ['prod', 'Производство'], ['build', 'Строительство']], events: [['mine', 'Мои'], ['all', 'Мировые']] };
+const TABS = { overview: [['country', 'Моя страна'], ['world', 'Страны мира'], ['wars', 'Войны'], ['victory', 'Победа']], army: [['units', 'Войска'], ['prod', 'Производство'], ['build', 'Строительство'], ['spies', 'Разведка']], events: [['mine', 'Мои'], ['all', 'Мировые']] };
 function openModal(m) { hideTip(); UI.hoverTip = null; UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
 function closeModal() { UI.modal = null; $('modal-back').classList.add('hidden'); hideTip(); }
 $('modal-back').addEventListener('mousedown', e => { if (e.target.id === 'modal-back') closeModal(); });
@@ -43,7 +43,7 @@ function overviewHTML(tab) {
     let h = `<div class="row" style="align-items:flex-start;gap:20px;flex-wrap:wrap"><div style="flex:1;min-width:280px"><div class="row" style="margin-bottom:10px">${flagImg(G.player, 'lg')}<div><b style="font-size:20px">${esc(C.n)}</b><div class="note">${GOV[C.gov]} · ${C.alliance >= 0 ? esc(G.al[C.alliance].n) : 'без альянса'}</div></div></div>`;
     h += `<div class="grid2" style="font-size:13px">`;
     const kv = (a, b) => `<div class="kv"><span>${a}</span><span>${b}</span></div>`;
-    h += kv('Место в мире', rankOf(G.player) + ' из ' + G.C.filter(c => c.alive).length) + kv('Очки', fmt(scoreOf(G.player))) + kv('Провинций', C.provs.length) + kv('Победные очки', C.vp) + kv('Население', fmtPop(C.inc.pop || 0)) + kv('Войска', units) + kv('🪖 Сухопутные', byDom.land) + kv('✈ Авиация', byDom.air) + kv('⚓ Флот', byDom.sea) + kv('🚀 Ракеты', byDom.msl) + kv('Военная мощь', fmt(C.pwr || armyPower(G.player))) + kv('Захвачено провинций', C.stats.taken) + kv('Потеряно провинций', C.stats.lost) + kv('Потери юнитов', C.stats.losses);
+    h += kv('Доктрина', `<span data-tip="${DOCS[C.doc].d}">${DOCS[C.doc].n}</span>`) + kv('Строй', `<span data-tip="${(GOV_FX[C.gov] || {}).t}">${GOV[C.gov]}</span>`) + kv('Место в мире', rankOf(G.player) + ' из ' + G.C.filter(c => c.alive).length) + kv('Очки', fmt(scoreOf(G.player))) + kv('Провинций', C.provs.length) + kv('Победные очки', C.vp) + kv('Население', fmtPop(C.inc.pop || 0)) + kv('Войска', units) + kv('🪖 Сухопутные', byDom.land) + kv('✈ Авиация', byDom.air) + kv('⚓ Флот', byDom.sea) + kv('🚀 Ракеты', byDom.msl) + kv('Военная мощь', fmt(C.pwr || armyPower(G.player))) + kv('Захвачено провинций', C.stats.taken) + kv('Потеряно провинций', C.stats.lost) + kv('Потери юнитов', C.stats.losses);
     h += `</div></div><div style="flex:1.2;min-width:320px"><table class="t"><tr><th>Ресурс</th><th>Запас</th><th>Доход/сут</th><th>Расход/сут</th><th>Баланс</th></tr>`;
     for (const k of RES) { const inc = C.inc[k] || 0, use = C.use[k] || 0; h += `<tr><td>${RES_INFO[k].i} ${RES_INFO[k].n}</td><td>${fmt(C.res[k])}</td><td style="color:#5fd35f">+${fmt(inc)}</td><td style="color:#e0a050">−${fmt(use)}</td><td style="color:${inc - use >= 0 ? '#5fd35f' : '#e0503c'}">${inc - use >= 0 ? '+' : ''}${fmt(inc - use)}</td></tr>`; }
     h += `<tr><td>👥 Живая сила</td><td>${fmt(C.res.man)}</td><td colspan="3">максимум ${fmt(C.manCap)}</td></tr></table></div></div>`;
@@ -91,6 +91,12 @@ function armyHTML(tab) {
     let h = `<table class="t"><tr><th>Провинция</th><th>Юнит</th><th>Прогресс</th><th>Осталось</th><th></th></tr>`; let n = 0;
     for (const p of C.provs) for (const [i, it] of G.pv[p].q.entries()) { n++; h += `<tr><td data-act="focus" data-l="${p}" style="cursor:pointer">${esc(PROV[p].name)}</td><td>${unitIcon(it.t, '#fff', 20)} ${UNITS[it.t].n}</td><td><div class="bar2"><i style="width:${Math.round((1 - it.left / it.total) * 100)}%;background:#4a90e2"></i></div></td><td>${Math.ceil(it.left)} ч</td><td><button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}">✕</button></td></tr>`; }
     return h + '</table>' + (n ? '' : '<div class="note" style="margin-top:8px">Очереди пусты. Выберите провинцию со зданиями и закажите юнитов.</div>');
+  }
+  if (tab === 'spies') {
+    const my = spiesOf(G.player);
+    let h = `<p class="note">Агентов: ${my.length}/${spyCap(G.player)}. Отправляйте агентов из панели чужой провинции (🔍 разведка, 💣 саботаж, 💰 коррупция) или в свою провинцию (🛡 контрразведка).</p>`;
+    h += my.length ? `<table class="t"><tr><th>Провинция</th><th>Страна</th><th>Миссия</th><th>Осталось</th></tr>${my.map(s => `<tr data-act="focus" data-l="${s.loc}" style="cursor:pointer"><td>${esc(PROV[s.loc].name)}</td><td>${flagImg(G.pv[s.loc].o)} ${esc(G.C[G.pv[s.loc].o].n)}</td><td>${SPY[s.mission].i} ${SPY[s.mission].n}${s.active ? ' (активен)' : ''}</td><td>${Math.ceil(s.left / (s.active ? 24 : 1))} ${s.active ? 'сут' : 'ч'}</td></tr>`).join('')}</table>` : '<div class="note">Нет активных агентов.</div>';
+    return h;
   }
   let h = `<table class="t"><tr><th>Провинция</th><th>Здание</th><th>Прогресс</th><th>Осталось</th><th></th></tr>`; let n = 0;
   for (const p of C.provs) { const b = G.pv[p].bq; if (!b) continue; n++; h += `<tr><td data-act="focus" data-l="${p}" style="cursor:pointer">${esc(PROV[p].name)}</td><td>${BLD[b.b].i} ${BLD[b.b].n} → ${b.lvl}</td><td><div class="bar2"><i style="width:${Math.round((1 - b.left / b.total) * 100)}%;background:#5fd35f"></i></div></td><td>${Math.ceil(b.left)} ч</td><td><button class="btn sm" data-act="cancelbuild" data-p="${p}">✕</button></td></tr>`; }
@@ -175,7 +181,7 @@ function marketHTML() {
 function eventsHTML(tab) {
   const list = G.news.filter(n => tab === 'all' ? (n.f === 'g' || n.f === 'p') : (n.f === 'p' || n.c.includes(G.player))).slice(-150).reverse();
   if (!list.length) return '<div class="note">Пока ничего не произошло.</div>';
-  const ico = { goal: '🏅', war: '⚔', peace: '🕊', nuke: '☢', capture: '🚩', loss: '💀', build: '🏗', unit: '🪖', research: '🔬', elim: '☠', capital: '⭐', defense: '🛡', cyber: '💻', peaceoffer: '🕊', warn: '⚠', attack: '💥', alliance: '🤝', join: '➕', land: '⚓' };
+  const ico = { goal: '🏅', spy: '🕵', war: '⚔', peace: '🕊', nuke: '☢', capture: '🚩', loss: '💀', build: '🏗', unit: '🪖', research: '🔬', elim: '☠', capital: '⭐', defense: '🛡', cyber: '💻', peaceoffer: '🕊', warn: '⚠', attack: '💥', alliance: '🤝', join: '➕', land: '⚓' };
   return `<table class="t">${list.map(n => `<tr data-act="focus" data-l="${n.l}" style="cursor:pointer"><td style="width:110px;color:var(--tx2)">${dateStr(n.h)} ${timeStr(n.h)}</td><td style="width:26px">${ico[n.t] || '•'}</td><td>${esc(n.x)}</td></tr>`).join('')}</table>`;
 }
 

@@ -19,7 +19,7 @@ function tick() {
   movementTick();
   flightTick();
   combatTick();
-  captureTick();
+  captureTick(); spyTick();
   for (const pv of G.pv) { if (pv.dmg > 0) pv.dmg = Math.max(0, pv.dmg - 0.03); if (pv.fall > 0) pv.fall = Math.max(0, pv.fall - 0.0008); }
   if (h % 6 === 0) { for (const c of G.C) if (c.alive) { if (c.dirty || h % 24 === 0) recalc(c); calcUse(c); } updateVis(); }
   if (h % 24 === 0) dayTick();
@@ -131,20 +131,20 @@ function canQueue(p, t) {
   if (!unitAvail(c.id, t)) return 'Нужны технологии';
   if (pv.q.length >= 5) return 'Очередь полна';
   if (d.dom === 'sea' && !isCoastal(p)) return 'Нужен выход к морю';
-  if (!canAfford(c.id, d.cost)) return 'Не хватает ресурсов';
+  if (!canAfford(c.id, d.cost, unitMult(c.id))) return 'Не хватает ресурсов';
   if (c.res.man < (d.cost.p || 0)) return 'Не хватает живой силы';
   return '';
 }
 function queueUnit(p, t) {
   const err = canQueue(p, t); if (err) return err;
   const pv = G.pv[p], d = UNITS[t];
-  pay(pv.o, d.cost); bump(pv.o, 'queued');
-  pv.q.push({ t, left: d.time, total: d.time });
+  const um = unitMult(pv.o); pay(pv.o, d.cost, um); bump(pv.o, 'queued');
+  pv.q.push({ t, left: d.time, total: d.time, m: um });
   return '';
 }
 function cancelQueue(p, idx) {
   const pv = G.pv[p], it = pv.q[idx]; if (!it) return;
-  refund(pv.o, UNITS[it.t].cost, 0.9); pv.q.splice(idx, 1);
+  refund(pv.o, UNITS[it.t].cost, 0.9 * (it.m || 1)); pv.q.splice(idx, 1);
 }
 function bldCost(b, lvl) { const d = BLD[b], m = Math.pow(lvl, 1.4); const o = {}; for (const k in d.cost) o[k] = Math.round(d.cost[k] * m); return o; }
 function bldMax(c, b) { const co = G.C[c]; return Math.min(BLD[b].max, b === 'silo' ? 1 : (3 + Math.floor((co.techs.infra || 0) / 1.5))); }
@@ -481,7 +481,8 @@ function missileImpact(u) {
   const k = ustat(u).atk;
   const victims = G.at[tgt].map(id => G.U.get(id)).filter(e => e && e.st !== 'cargo');
   if (d.nuke) {
-    for (const e of victims) { e.hp -= rr(80, 105); if (e.hp <= 0) killUnit(e, u.o); }
+    for (const e of victims) { e.hp -= rr(80, 105) * (UNITS[e.t].nbc ? 0.5 : 1); if (e.hp <= 0) killUnit(e, u.o); }
+    if (pv) for (const nb of PROV[tgt].adj) { const np = G.pv[nb]; np.dmg = Math.min(100, np.dmg + 25); np.fall = Math.max(np.fall, 0.3); np.pop = Math.round(np.pop * 0.9); G.C[np.o].dirty = true; for (const id of G.at[nb].slice()) { const e = G.U.get(id); if (e && e.st !== 'cargo' && UNITS[e.t].dom !== 'msl') { e.hp -= rr(20, 40) * (UNITS[e.t].nbc ? 0.5 : 1); if (e.hp <= 0) killUnit(e, u.o); } } }
     if (pv) {
       pv.dmg = 100; pv.fall = 0.75; pv.pop = Math.round(pv.pop * 0.55);
       for (const b of ['infra', 'factory', 'barracks', 'airfield', 'naval', 'aa', 'radar', 'eco', 'fort']) pv.b[b] = Math.max(0, pv.b[b] - 2);
@@ -570,7 +571,7 @@ function fightAt(loc) {
       let key = wkey(ed.cls);
       if (e.st === 'base' && ed.dom === 'air') { if (ad.dom === 'land' && a.t !== 'aa') { key = 'h'; } else key = 'a'; }
       let ww = ad.a[key];
-      if (ed.dom === 'sea' && ed.stealth && ad.sub !== undefined || (ed.stealth && ed.dom === 'sea')) {
+      if (ed.stealth && (ed.dom === 'sea' || ed.dom === 'land')) {
         // submarines: need detection
         const detect = clamp(1 - ed.stealth + (ad.sub || 0) * 0.012 + (e.reveal > G.hour ? 1 : 0), 0, 1);
         if (R() > detect) continue;
@@ -734,6 +735,7 @@ function updateVis(force) {
     for (let d = 0; d < depth; d++) { const nx = []; for (const v of fr) for (const n of ADJ[v]) if (!vis[n]) { vis[n] = 1; nx.push(n); } fr = nx; if (!fr.length) break; }
   };
   for (const c of friends) for (const p of G.C[c].provs) { bfs(p, 1 + (G.pv[p].b.radar ? G.pv[p].b.radar + (radar >= 2 ? 1 : 0) : 0)); }
+  if (G.intel) for (const k in G.intel) if (G.intel[k] > G.hour) vis[k] = 1;
   for (const [, u] of G.U) {
     if (!friends.includes(u.o)) continue;
     if (u.st === 'cargo') continue;
@@ -752,8 +754,8 @@ function isVisible(u) {
   if (!G.vis[u.loc]) return false;
   if (d.stealth && !(u.reveal > G.hour)) {
     // visible only with friendly ship/air in the same location
-    for (const id of G.at[u.loc]) { const e = G.U.get(id); if (e && (e.o === G.player || areAllied(e.o, G.player)) && (UNITS[e.t].dom === 'sea' && e.t !== 'sub' || UNITS[e.t].dom === 'air')) return true; }
-    return false;
+    for (const id of G.at[u.loc]) { const e = G.U.get(id); if (e && (e.o === G.player || areAllied(e.o, G.player)) && (d.dom === 'land' ? (UNITS[e.t].dom === 'land' && e.t !== 'spec' || UNITS[e.t].dom === 'air') : (UNITS[e.t].dom === 'sea' && e.t !== 'sub' || UNITS[e.t].dom === 'air'))) return true; }
+    return G.intel && G.intel[u.loc] > G.hour;
   }
   return true;
 }
@@ -796,3 +798,48 @@ function checkGoals() {
     news('goal', `🏅 Цель выполнена: ${g.t}. Награда: 💵${rew}`, -1, [G.player], 'p');
   });
 }
+
+/* ---------- espionage & acceleration ---------- */
+const SPY = { intel: { n: 'Разведка', i: '🔍', cost: 120, t: 36, d: 'Открывает все войска в провинции на 3 суток.' }, sabotage: { n: 'Саботаж', i: '💣', cost: 220, t: 30, d: 'Шанс снизить уровень военного здания на 1. Опасно: агента могут поймать.' }, corrupt: { n: 'Коррупция', i: '💰', cost: 180, t: 30, d: 'На 5 суток отнимает 40% налогов провинции.' }, counter: { n: 'Контрразведка', i: '🛡', cost: 100, t: 24, d: 'Ловит вражеских агентов в вашей провинции (20 суток).' } };
+function spyCap(c) { return 3 + 2 * (G.C[c].techs.elect || 0); }
+function spiesOf(c) { return G.spies.filter(s => s.o === c); }
+function counterAt(owner, p) { let n = 0; for (const s of G.spies) if (s.o === owner && s.loc === p && s.mission === 'counter' && s.active) n++; return n; }
+function sendSpy(c, p, mission) {
+  const C = G.C[c], pv = G.pv[p], m = SPY[mission];
+  if (!m) return 'Неизвестная миссия';
+  if (mission === 'counter' ? pv.o !== c : pv.o === c) return mission === 'counter' ? 'Контрразведка — только в своих провинциях' : 'Нельзя на свою территорию';
+  if (mission !== 'counter' && areAllied(c, pv.o)) return 'Нельзя шпионить за союзником';
+  if (spiesOf(c).length >= spyCap(c)) return `Лимит агентов: ${spyCap(c)} (растёт с технологией «Электроника»)`;
+  if (G.spies.filter(s => s.o === c && s.loc === p && s.mission !== 'counter').length >= 3) return 'Не больше 3 агентов в одной провинции';
+  if (C.res.cash < m.cost) return 'Не хватает денег';
+  C.res.cash -= m.cost; bump(c, 'spies');
+  G.spies.push({ id: ++G.spyId, o: c, loc: p, mission, left: m.t, active: false });
+  return '';
+}
+function spyTick() {
+  if (!G.spies.length) return;
+  for (let i = G.spies.length - 1; i >= 0; i--) {
+    const s = G.spies[i]; s.left--;
+    if (s.left > 0) continue;
+    const pv = G.pv[s.loc], tgt = pv.o, S = G.C[s.o];
+    if (!G.C[s.o].alive) { G.spies.splice(i, 1); continue; }
+    if (s.mission === 'counter') { if (!s.active) { s.active = true; s.left = 24 * 20; } else G.spies.splice(i, 1); continue; }
+    G.spies.splice(i, 1);
+    if (tgt === s.o) continue;
+    const ci = counterAt(tgt, s.loc) * 0.18 + G.pv[s.loc].b.radar * 0.04;
+    const base = s.mission === 'intel' ? 0.85 : s.mission === 'sabotage' ? 0.55 : 0.65;
+    if (R() > base - ci) { addRel(s.o, tgt, -12); note(s.o, 'spy', `🕵 Агент пойман в ${PROV[s.loc].name} (${G.C[tgt].n})`, s.loc); note(tgt, 'spy', `🕵 Пойман вражеский агент (${S.n}) в ${PROV[s.loc].name}`, s.loc); continue; }
+    if (s.mission === 'intel') { G.intel[s.loc] = G.hour + 72; note(s.o, 'spy', `🔍 Разведданные получены: ${PROV[s.loc].name}`, s.loc); }
+    else if (s.mission === 'corrupt') { pv.corrupt = G.hour + 120; G.C[tgt].dirty = true; note(s.o, 'spy', `💰 Коррупция в ${PROV[s.loc].name}: налоги упадут на 5 суток`, s.loc); note(tgt, 'spy', `💰 Коррупция подрывает налоги: ${PROV[s.loc].name}`, s.loc); }
+    else if (s.mission === 'sabotage') {
+      const bs = ['factory', 'airfield', 'naval', 'barracks', 'radar', 'silo', 'aa'].filter(b => pv.b[b] > 0);
+      if (bs.length) { const b = pick(bs); pv.b[b]--; pv.dmg = Math.min(100, pv.dmg + 10); G.C[tgt].dirty = true; note(s.o, 'spy', `💣 Диверсия удалась: ${BLD[b].n} в ${PROV[s.loc].name} понижено`, s.loc); note(tgt, 'spy', `💣 Диверсия! ${BLD[b].n} в ${PROV[s.loc].name} понижено до ур. ${pv.b[b]}`, s.loc); news('spy', `💣 Диверсия в ${PROV[s.loc].name} (${G.C[tgt].n})`, s.loc, [s.o, tgt], ''); }
+    }
+  }
+}
+function speedUp(p, kind, idx) {
+  const pv = G.pv[p], c = pv.o;
+  if (kind === 'build') { if (!pv.bq) return 'Нет стройки'; const cost = Math.ceil(pv.bq.left * 6); if (G.C[c].res.cash < cost) return 'Не хватает денег'; G.C[c].res.cash -= cost; pv.bq.left = 0.01; return ''; }
+  const it = pv.q[idx || 0]; if (!it) return 'Нет заказа'; const cost = Math.ceil(it.left * 4); if (G.C[c].res.cash < cost) return 'Не хватает денег'; G.C[c].res.cash -= cost; it.left = 0.01; return '';
+}
+function speedCost(p, kind, idx) { const pv = G.pv[p]; if (kind === 'build') return pv.bq ? Math.ceil(pv.bq.left * 6) : 0; const it = pv.q[idx || 0]; return it ? Math.ceil(it.left * 4) : 0; }

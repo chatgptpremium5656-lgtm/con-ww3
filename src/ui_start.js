@@ -1,6 +1,6 @@
 'use strict';
 /* ===== Start screen, game loop, boot ===== */
-UI.start = { c: -1, scenario: 'eve', diff: 'normal', win: 55 };
+UI.start = { c: -1, scenario: 'eve', diff: 'normal', win: 55, doc: 'auto' };
 let loopLast = 0, acc = 0, lastAutoHour = 0, overShown = false;
 
 function importance(c) { return c.mil * 3 + Math.log10(c.gdp + 10) * 2 + (c.nukes ? 6 : 0); }
@@ -31,6 +31,8 @@ function showStart() {
     <div class="opt" id="o-sc" style="flex-direction:column">${Object.entries(SCENARIOS).map(([k, s]) => `<button class="btn ${UI.start.scenario === k ? 'on' : ''}" style="text-align:left" data-act="opt" data-g="scenario" data-v="${k}"><b>${s.n}</b><br><small>${s.d}</small></button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Сложность ИИ</h3>
     <div class="opt">${Object.entries(DIFF).map(([k, s]) => `<button class="btn ${UI.start.diff === k ? 'on' : ''}" data-act="opt" data-g="diff" data-v="${k}">${s.n}</button>`).join('')}</div>
+    <h3 style="margin:6px 0 0">Доктрина</h3>
+    <div class="opt">${[['auto', 'Авто'], ...Object.entries(DOCS).map(([k, v]) => [k, v.n])].map(([k, n]) => `<button class="btn ${UI.start.doc === k ? 'on' : ''}" data-act="opt" data-g="doc" data-v="${k}" data-tip="${k === 'auto' ? 'По блоку страны' : DOCS[k].d}">${n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Победа: <span id="winv">${UI.start.win}</span>% победных очков</h3>
     <input type="range" min="25" max="80" value="${UI.start.win}" oninput="UI.start.win=+this.value;$('winv').textContent=this.value">
     <button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
@@ -75,7 +77,7 @@ function startNew() {
   const o = UI.start;
   $('gobtn').disabled = true; $('gobtn').textContent = 'Загрузка мира…';
   setTimeout(() => {
-    newGame({ player: o.c, scenario: o.scenario, diff: o.diff, win: o.win / 100 });
+    newGame({ player: o.c, scenario: o.scenario, diff: o.diff, win: o.win / 100, doc: o.doc === 'auto' ? undefined : o.doc });
     afterNew();
   }, 30);
 }

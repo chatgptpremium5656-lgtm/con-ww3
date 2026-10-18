@@ -66,8 +66,8 @@ const CCOLORS = assignColors();
 function ustat(u) {
   const d = UNITS[u.t], c = G.C[u.o], g = u.g;
   return {
-    atk: GEN_ATK[g] * (c.short && (c.short.supp || c.short.fuel) ? 0.8 : 1),
-    arm: d.arm + GEN_ARM[g],
+    atk: GEN_ATK[g] * (DOCS[c.doc] ? DOCS[c.doc].atk : 1) * (c.short && (c.short.supp || c.short.fuel) ? 0.8 : 1),
+    arm: d.arm + GEN_ARM[g] + (DOCS[c.doc] ? DOCS[c.doc].arm : 0),
     spd: d.spd * GEN_SPD[g] * (1 + 0.04 * (c.techs.logist || 0))
   };
 }
@@ -87,7 +87,7 @@ function newGameShell(opts) {
     C: [], pv: [], U: new Map(), nextU: 1, at: Array.from({ length: N }, () => []),
     rel: new Int8Array(NC * NC), war: new Uint8Array(NC * NC), acc: new Uint8Array(NC * NC), warStart: new Int32Array(NC * NC),
     al: [], news: [], fx: [], market: { m: { food: 1, supp: 1, fuel: 1, comp: 1, elec: 1, rare: 1 } },
-    player: -1, over: null, tension: 1, stats: { battles: 0, nukes: 0 }, vis: new Uint8Array(N), visHour: -99, totalVP: 0, wlost: new Int16Array(NC * NC), ownVer: (++SHELL_N) * 100000, bat: new Map(), truce: new Int32Array(NC * NC)
+    player: -1, over: null, tension: 1, stats: { battles: 0, nukes: 0 }, vis: new Uint8Array(N), visHour: -99, totalVP: 0, wlost: new Int16Array(NC * NC), spies: [], spyId: 0, intel: {}, ownVer: (++SHELL_N) * 100000, bat: new Map(), truce: new Int32Array(NC * NC)
   };
   G.opts.seed = seed;
   const sc0 = SCENARIOS[G.opts.scenario] || SCENARIOS.eve;
@@ -100,7 +100,7 @@ function newGameShell(opts) {
       pop: c.pop, gdp: c.gdp, gov: c.gov, mil: c.mil, tech: c.tech, nukes: c.nukes, agg: c.agg, bloc: c.bloc, rivals: c.rivals, flag: c.flag,
       res: { cash: 0, food: 0, supp: 0, fuel: 0, comp: 0, elec: 0, rare: 0, man: 0 }, inc: {}, use: {}, manCap: 0,
       techs: {}, gen: {}, rs: {}, alliance: -1, short: {}, foodScale: 1, stats: { lost: 0, taken: 0, kills: 0, losses: 0 }, ai_s: { lastWar: -999 },
-      provs: [], dirty: true, vp: 0
+      provs: [], dirty: true, vp: 0, doc: c.bloc === 'NATO' || c.bloc === 'PACIFIC' ? 'west' : (c.bloc === 'CSTO' || c.bloc === 'CHINA' || c.gov === 'communist') ? 'east' : 'euro'
     });
   });
   // provinces
@@ -122,6 +122,7 @@ function newGame(opts) {
   for (const [a, b] of sc.wars) {
     if (cidx[a] !== undefined && cidx[b] !== undefined && !G.war[cidx[a] * NC + cidx[b]]) { setWar(cidx[a], cidx[b]); addRel(cidx[a], cidx[b], -70); }
   }
+  if (G.opts.doc && DOCS[G.opts.doc]) G.C[G.player].doc = G.opts.doc;
   updateVis(true);
   return G;
 }
@@ -282,6 +283,7 @@ function killUnit(u, by) {
 }
 
 /* economy helpers */
+function unitMult(c) { const C = G.C[c]; return (DOCS[C.doc] ? DOCS[C.doc].cost : 1) * ((GOV_FX[C.gov] || GOV_FX.autocracy).unit); }
 function canAfford(c, cost, mult = 1) { for (const k in cost) { const r = RES_SHORT[k]; if (G.C[c].res[r] < cost[k] * mult - 1e-9) return false; } return true; }
 function pay(c, cost, mult = 1) { for (const k in cost) G.C[c].res[RES_SHORT[k]] -= cost[k] * mult; }
 function refund(c, cost, mult = 1) { for (const k in cost) G.C[c].res[RES_SHORT[k]] += cost[k] * mult; }
@@ -309,6 +311,7 @@ function provProd(c, p, out) {
   const co0 = CTY[c];
   out.cash += pv.cashBase * (1 + 0.04 * b.infra + 0.03 * b.eco) * occ * dmg * fall * (1 + 0.1 * (t.indus || 0));
   out.pop += pv.pop;
+  if (pv.corrupt > G.hour) out.cash -= pv.cashBase * 0.4;
 }
 function recalc(c) {
   const co = typeof c === 'number' ? G.C[c] : c;
@@ -326,8 +329,9 @@ function recalc(c) {
     }
     provProd(co.id, p, out);
   }
+  const gf = GOV_FX[co.gov] || GOV_FX.autocracy; out.cash *= gf.cash;
   co.inc = out; co.vp = co.provs.reduce((a, p) => a + PROV[p].vp, 0);
-  co.manCap = out.pop / 1000 * 0.006;
+  co.manCap = out.pop / 1000 * 0.006 * gf.man;
   co.dirty = false;
   // food need scales with current pop
   co.foodNeed = Math.pow(out.pop / 1e6, 0.85) * 0.8 * (co.foodScale || 1);
@@ -337,7 +341,7 @@ function recalc(c) {
 function calcUse(c) {
   const co = typeof c === "number" ? G.C[c] : c;
   const use = { food: 0, supp: 0, fuel: 0, cash: 0 };
-  const lg = 1 - 0.08 * (co.techs.logist || 0);
+  const lg = (1 - 0.08 * (co.techs.logist || 0)) * (DOCS[co.doc] ? DOCS[co.doc].up : 1);
   for (const [, u] of G.U) {
     if (u.o !== co.id) continue;
     const up = UNITS[u.t].up;

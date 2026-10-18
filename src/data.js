@@ -48,7 +48,7 @@ const UNITS = {
   arty:  { n: 'Артиллерия', dom: 'land', cls: 'soft', a: { s: 17, h: 9, a: 0, n: 0, x: 8 }, arm: 1, spd: 3.2, vis: 1, hp: 100, cost: { c: 30, m: 12, s: 6, p: 3 }, time: 28, req: ['factory', 1], up: { f: 0.5, s: 1.8, o: 0.4 }, desc: 'Огневая поддержка. Уязвима в ближнем бою.', backline: true },
   mlrs:  { n: 'РСЗО', dom: 'land', cls: 'soft', a: { s: 24, h: 11, a: 0, n: 0, x: 10 }, arm: 1, spd: 4.2, vis: 1, hp: 100, cost: { c: 44, m: 16, e: 3, s: 8, p: 3 }, time: 36, req: ['factory', 3], up: { f: 0.5, s: 2.2, o: 0.5 }, desc: 'Реактивные системы залпового огня.', backline: true },
   aa:    { n: 'Мобильное ПВО', dom: 'land', cls: 'soft', a: { s: 2, h: 1, a: 19, n: 0, x: 0 }, arm: 3, spd: 4.4, vis: 1, hp: 100, cost: { c: 30, m: 10, e: 4, s: 4, p: 3 }, time: 28, req: ['factory', 2], up: { f: 0.5, s: 1, o: 0.6 }, desc: 'Зенитные комплексы. Защищают от авиации и вертолётов.', backline: true },
-  spec:  { n: 'Спецназ', dom: 'land', cls: 'soft', a: { s: 11, h: 5, a: 1, n: 0, x: 3 }, arm: 3, spd: 3.4, vis: 2, hp: 100, cost: { c: 34, e: 3, s: 4, p: 4 }, time: 30, req: ['barracks', 3], up: { f: 1, s: 1 }, desc: 'Элитная пехота. Хороша в городах и горах, дальний обзор.' },
+  spec:  { n: 'Спецназ', stealth: 0.45, nbc: true, dom: 'land', cls: 'soft', a: { s: 11, h: 5, a: 1, n: 0, x: 3 }, arm: 3, spd: 3.4, vis: 2, hp: 100, cost: { c: 34, e: 3, s: 4, p: 4 }, time: 30, req: ['barracks', 3], up: { f: 1, s: 1 }, desc: 'Элитная пехота. Хороша в городах и горах, дальний обзор.' },
   recon: { n: 'Разведка', dom: 'land', cls: 'hard', a: { s: 3, h: 1, a: 0, n: 0, x: 0 }, arm: 4, spd: 8.5, vis: 3, hp: 100, cost: { c: 14, m: 4, o: 1, s: 1, p: 2 }, time: 14, req: ['barracks', 1], up: { f: 0.5, s: 0.4, o: 0.5 }, desc: 'Бронеразведка. Огромный радиус обзора и скорость.' },
 
   fighter: { n: 'Истребитель', dom: 'air', cls: 'air', a: { s: 4, h: 3, a: 21, n: 3, x: 0 }, arm: 4, spd: 42, vis: 2, hp: 100, rng: 130, fuel: 6, cost: { c: 70, m: 20, e: 8, o: 5, p: 1 }, time: 40, req: ['airfield', 2], up: { s: 1, o: 2.2 }, desc: 'Завоевание превосходства в воздухе. Патрулирует провинции.' },
@@ -103,6 +103,19 @@ const MAX_GEN = 3;
 const GEN_ATK = [1, 1.25, 1.55, 1.9], GEN_ARM = [0, 1, 2, 3], GEN_SPD = [1, 1.04, 1.08, 1.12];
 
 /* Governments */
+const DOCS = {
+  west: { n: 'Западная', d: 'Лучшая техника и броня (+8% атаки, +1 брони), но юниты на 20% дороже.', atk: 1.08, arm: 1, cost: 1.2, up: 1 },
+  east: { n: 'Восточная', d: 'Дешёвая масса: юниты на 18% дешевле, но -5% атаки.', atk: 0.95, arm: 0, cost: 0.82, up: 1 },
+  euro: { n: 'Европейская', d: 'Сбалансированная: содержание армии на 10% дешевле.', atk: 1.0, arm: 0, cost: 1.0, up: 0.9 }
+};
+const GOV_FX = {
+  democracy: { cash: 1.06, man: 1, unit: 1, t: '+6% денег' },
+  autocracy: { cash: 0.97, man: 1.05, unit: 0.93, t: '-7% цены юнитов' },
+  communist: { cash: 1, man: 1.2, unit: 1, t: '+20% живой силы' },
+  monarchy: { cash: 1.02, man: 1.05, unit: 1, t: '+2% денег, +5% живой силы' },
+  theocracy: { cash: 0.95, man: 1.15, unit: 1, t: '+15% живой силы' },
+  junta: { cash: 0.93, man: 1.1, unit: 0.9, t: '-10% цены юнитов' }
+};
 const GOV = { democracy: 'Демократия', autocracy: 'Автократия', communist: 'Коммунистический режим', monarchy: 'Монархия', theocracy: 'Теократия', junta: 'Военная хунта' };
 
 const BLOCS = {
