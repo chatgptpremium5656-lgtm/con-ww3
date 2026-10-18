@@ -43,7 +43,7 @@ function overviewHTML(tab) {
     let h = `<div class="row" style="align-items:flex-start;gap:20px;flex-wrap:wrap"><div style="flex:1;min-width:280px"><div class="row" style="margin-bottom:10px">${flagImg(G.player, 'lg')}<div><b style="font-size:20px">${esc(C.n)}</b><div class="note">${GOV[C.gov]} · ${C.alliance >= 0 ? esc(G.al[C.alliance].n) : 'без альянса'}</div></div></div>`;
     h += `<div class="grid2" style="font-size:13px">`;
     const kv = (a, b) => `<div class="kv"><span>${a}</span><span>${b}</span></div>`;
-    h += kv('Провинций', C.provs.length) + kv('Победные очки', C.vp) + kv('Население', fmtPop(C.inc.pop || 0)) + kv('Войска', units) + kv('🪖 Сухопутные', byDom.land) + kv('✈ Авиация', byDom.air) + kv('⚓ Флот', byDom.sea) + kv('🚀 Ракеты', byDom.msl) + kv('Военная мощь', fmt(C.pwr || armyPower(G.player))) + kv('Захвачено провинций', C.stats.taken) + kv('Потеряно провинций', C.stats.lost) + kv('Потери юнитов', C.stats.losses);
+    h += kv('Место в мире', rankOf(G.player) + ' из ' + G.C.filter(c => c.alive).length) + kv('Очки', fmt(scoreOf(G.player))) + kv('Провинций', C.provs.length) + kv('Победные очки', C.vp) + kv('Население', fmtPop(C.inc.pop || 0)) + kv('Войска', units) + kv('🪖 Сухопутные', byDom.land) + kv('✈ Авиация', byDom.air) + kv('⚓ Флот', byDom.sea) + kv('🚀 Ракеты', byDom.msl) + kv('Военная мощь', fmt(C.pwr || armyPower(G.player))) + kv('Захвачено провинций', C.stats.taken) + kv('Потеряно провинций', C.stats.lost) + kv('Потери юнитов', C.stats.losses);
     h += `</div></div><div style="flex:1.2;min-width:320px"><table class="t"><tr><th>Ресурс</th><th>Запас</th><th>Доход/сут</th><th>Расход/сут</th><th>Баланс</th></tr>`;
     for (const k of RES) { const inc = C.inc[k] || 0, use = C.use[k] || 0; h += `<tr><td>${RES_INFO[k].i} ${RES_INFO[k].n}</td><td>${fmt(C.res[k])}</td><td style="color:#5fd35f">+${fmt(inc)}</td><td style="color:#e0a050">−${fmt(use)}</td><td style="color:${inc - use >= 0 ? '#5fd35f' : '#e0503c'}">${inc - use >= 0 ? '+' : ''}${fmt(inc - use)}</td></tr>`; }
     h += `<tr><td>👥 Живая сила</td><td>${fmt(C.res.man)}</td><td colspan="3">максимум ${fmt(C.manCap)}</td></tr></table></div></div>`;
@@ -52,13 +52,13 @@ function overviewHTML(tab) {
     return h + '</table>';
   }
   if (tab === 'world') {
-    const sort = UI.wsort || 'vp';
-    const rows = G.C.filter(c => c.alive).map(c => ({ c, p: c.provs.length, vp: c.vp, pw: c.pwr || 0, pop: c.inc.pop || 0 }));
-    rows.sort((a, b) => b[sort === 'pw' ? 'pw' : sort === 'p' ? 'p' : sort === 'pop' ? 'pop' : 'vp'] - a[sort === 'pw' ? 'pw' : sort === 'p' ? 'p' : sort === 'pop' ? 'pop' : 'vp']);
-    let h = `<table class="t"><tr><th>#</th><th>Страна</th><th>Альянс</th><th data-act="wsort" data-s="p">Провинции</th><th data-act="wsort" data-s="vp">★ ПО</th><th data-act="wsort" data-s="pw">Мощь</th><th data-act="wsort" data-s="pop">Население</th><th>Отн.</th></tr>`;
+    const sort = UI.wsort || 'sc';
+    const rows = G.C.filter(c => c.alive).map(c => ({ c, p: c.provs.length, vp: c.vp, pw: c.pwr || 0, pop: c.inc.pop || 0, sc: scoreOf(c.id) }));
+    rows.sort((a, b) => b[sort] - a[sort]);
+    let h = `<table class="t"><tr><th>#</th><th>Страна</th><th>Альянс</th><th data-act="wsort" data-s="sc">Очки</th><th data-act="wsort" data-s="p">Провинции</th><th data-act="wsort" data-s="vp">★ ПО</th><th data-act="wsort" data-s="pw">Мощь</th><th data-act="wsort" data-s="pop">Население</th><th>Отн.</th></tr>`;
     rows.slice(0, 80).forEach((r, i) => {
       const c = r.c, rel = relOf(G.player, c.id), war = G.war[G.player * NC + c.id];
-      h += `<tr class="${c.id === G.player ? 'me' : ''}" data-act="dipl" data-c="${c.id}" style="cursor:pointer"><td>${i + 1}</td><td>${flagImg(c.id)} ${esc(c.n)}${c.nukes ? ' ☢' : ''}</td><td>${c.alliance >= 0 ? esc(G.al[c.alliance].n) : '—'}</td><td>${r.p}</td><td>${r.vp}</td><td>${fmt(r.pw)}</td><td>${fmtPop(r.pop)}</td><td>${c.id === G.player ? '' : war ? '<span class="pill war">война</span>' : areAllied(c.id, G.player) ? '<span class="pill ally">союзник</span>' : Math.round(rel)}</td></tr>`;
+      h += `<tr class="${c.id === G.player ? 'me' : ''}" data-act="dipl" data-c="${c.id}" style="cursor:pointer"><td>${i + 1}</td><td>${flagImg(c.id)} ${esc(c.n)}${c.nukes ? ' ☢' : ''}</td><td>${c.alliance >= 0 ? esc(G.al[c.alliance].n) : '—'}</td><td><b>${fmt(r.sc)}</b></td><td>${r.p}</td><td>${r.vp}</td><td>${fmt(r.pw)}</td><td>${fmtPop(r.pop)}</td><td>${c.id === G.player ? '' : war ? '<span class="pill war">война</span>' : areAllied(c.id, G.player) ? '<span class="pill ally">союзник</span>' : Math.round(rel)}</td></tr>`;
     });
     return h + '</table><div class="note" style="margin-top:6px">Показаны 80 сильнейших. Клик — дипломатия со страной.</div>';
   }
@@ -175,7 +175,7 @@ function marketHTML() {
 function eventsHTML(tab) {
   const list = G.news.filter(n => tab === 'all' ? (n.f === 'g' || n.f === 'p') : (n.f === 'p' || n.c.includes(G.player))).slice(-150).reverse();
   if (!list.length) return '<div class="note">Пока ничего не произошло.</div>';
-  const ico = { war: '⚔', peace: '🕊', nuke: '☢', capture: '🚩', loss: '💀', build: '🏗', unit: '🪖', research: '🔬', elim: '☠', capital: '⭐', defense: '🛡', cyber: '💻', peaceoffer: '🕊', warn: '⚠', attack: '💥', alliance: '🤝', join: '➕', land: '⚓' };
+  const ico = { goal: '🏅', war: '⚔', peace: '🕊', nuke: '☢', capture: '🚩', loss: '💀', build: '🏗', unit: '🪖', research: '🔬', elim: '☠', capital: '⭐', defense: '🛡', cyber: '💻', peaceoffer: '🕊', warn: '⚠', attack: '💥', alliance: '🤝', join: '➕', land: '⚓' };
   return `<table class="t">${list.map(n => `<tr data-act="focus" data-l="${n.l}" style="cursor:pointer"><td style="width:110px;color:var(--tx2)">${dateStr(n.h)} ${timeStr(n.h)}</td><td style="width:26px">${ico[n.t] || '•'}</td><td>${esc(n.x)}</td></tr>`).join('')}</table>`;
 }
 
@@ -217,7 +217,7 @@ function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m
 function menuHTML() {
   let h = `<div style="display:flex;flex-direction:column;gap:8px"><button class="btn pri" data-act="closemodal">▶ Продолжить</button>`;
   for (const n of [1, 2, 3]) { const m = slotInfo(n); h += `<div class="row"><button class="btn" style="flex:1" data-act="save" data-n="${n}">💾 Сохранить в слот ${n}</button><button class="btn" style="flex:1" data-act="loadslot" data-n="${n}" ${m ? '' : 'disabled'}>📂 ${m ? esc(m.t) : 'пусто'}</button></div>`; }
-  h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label></div>`;
+  h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
   h += `<div class="row"><button class="btn danger" style="flex:1" data-act="newgame">⟲ Новая игра</button></div></div>`;
   return h;
 }
@@ -259,6 +259,7 @@ window.actModal = function (a, d, el, e) {
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;
     case 'tutgo': closeModal(); G.paused = false; G.speed = 2; updateSpeedBtns(); break;
     case 'optsound': UI.sound = el.checked; break;
+    case 'optdn': MV.daynight = el.checked; MV.dirty = true; break;
     case 'optlabels': MV.labels = el.checked; MV.dirty = true; break;
     case 'optfog': G.fogOff = !el.checked; updateVis(true); MV.dirty = true; break;
     case 'newgame': if (UI.newConfirm) { UI.newConfirm = false; closeModal(); showStart(); } else { UI.newConfirm = true; el.textContent = '⚠ Нажмите ещё раз для подтверждения'; setTimeout(() => { UI.newConfirm = false; }, 4000); } break;

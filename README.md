@@ -13,6 +13,7 @@ Open **`index.html`** in any modern browser (no server, no dependencies). Everyt
 * Diplomacy: war / peace, alliances (NATO, CSTO, Pacific pact, Beijing union, Arab coalition…), military access, gifts, relations.
 * AI for every country: economy, production, research, diplomacy, land/air/naval/missile warfare, nuclear doctrine.
 * Fog of war, map layers (political, terrain, relations, alliances, population, power, resources), minimap, save/load, autosave, sounds.
+* Score + world ranking, in-game objectives with rewards, day/night cycle, unit upgrades, cyber attacks.
 * Touch support (pinch, long-press = order), responsive layout.
 
 ## Controls

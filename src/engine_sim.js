@@ -2,6 +2,7 @@
 /* ===== Simulation: tick, production, movement, flights, combat, capture ===== */
 for (const t in UNITS) { const d = UNITS[t]; if (d.dom === 'air') d.fuel = Math.ceil(d.rng / d.spd * 2 + (d.dom === 'air' && t === 'heli' ? 6 : 5)); }
 
+function bump(c, k) { const s = G.C[c].stats; s[k] = (s[k] || 0) + 1; }
 function news(type, text, loc, cs, flag) {
   G.newsId = (G.newsId || 0) + 1;
   G.news.push({ id: G.newsId, h: G.hour, t: type, x: text, l: loc === undefined ? -1 : loc, c: cs || [], f: flag || '' });
@@ -22,6 +23,7 @@ function tick() {
   for (const pv of G.pv) { if (pv.dmg > 0) pv.dmg = Math.max(0, pv.dmg - 0.03); if (pv.fall > 0) pv.fall = Math.max(0, pv.fall - 0.0008); }
   if (h % 6 === 0) { for (const c of G.C) if (c.alive) { if (c.dirty || h % 24 === 0) recalc(c); calcUse(c); } updateVis(); }
   if (h % 24 === 0) dayTick();
+  if (h % 6 === 0) checkGoals();
   // AI scheduling
   for (const c of G.C) {
     if (!c.alive || !c.ai) continue;
@@ -98,7 +100,7 @@ function productionTick() {
       if (it.left <= 0) {
         if (d.dom === 'air' && basedAir(i) >= airCapacity(i)) { it.left = 0; continue; }
         pv.q.shift();
-        const u = spawnUnit(pv.o, it.t, i);
+        const u = spawnUnit(pv.o, it.t, i); bump(pv.o, 'trained');
         c.dirty = true;
         note(pv.o, 'unit', `${d.n} готов: ${PROV[i].name}`, i);
       }
@@ -136,7 +138,7 @@ function canQueue(p, t) {
 function queueUnit(p, t) {
   const err = canQueue(p, t); if (err) return err;
   const pv = G.pv[p], d = UNITS[t];
-  pay(pv.o, d.cost);
+  pay(pv.o, d.cost); bump(pv.o, 'queued');
   pv.q.push({ t, left: d.time, total: d.time });
   return '';
 }
@@ -161,7 +163,7 @@ function canBuild(p, b) {
 function startBuild(p, b) {
   const err = canBuild(p, b); if (err) return err;
   const pv = G.pv[p], lvl = pv.b[b] + 1;
-  pay(pv.o, bldCost(b, lvl));
+  pay(pv.o, bldCost(b, lvl)); bump(pv.o, 'built');
   const t = Math.round(BLD[b].time * Math.pow(lvl, 0.75));
   pv.bq = { b, lvl, left: t, total: t };
   return '';
@@ -191,7 +193,7 @@ function startResearch(c, kind, id, lvl) {
   if (co.rs[opt.br]) return 'Ветка занята';
   const cost = techCost(kind, id, lvl);
   if (!canAfford(c, cost)) return 'Не хватает ресурсов';
-  pay(c, cost);
+  pay(c, cost); bump(c, 'researched');
   const total = techDays(kind, id, lvl) * 24;
   co.rs[opt.br] = { k: kind, id, lvl, left: total, total };
   return '';
@@ -760,4 +762,37 @@ function nearestLoc(x, y) {
   let best = 0, bd = 1e18;
   for (let i = 0; i < N; i++) { const d = (lx(i) - x) ** 2 + (ly(i) - y) ** 2; if (d < bd) { bd = d; best = i; } }
   return best;
+}
+
+/* ---------- score & goals ---------- */
+function scoreOf(c) {
+  const C = G.C[c]; if (!C.alive) return 0;
+  let tech = 0; for (const k in C.techs) tech += C.techs[k]; for (const k in C.gen) tech += C.gen[k] * 0.5;
+  return Math.round(C.provs.length * 12 + C.vp * 45 + (C.stats.kills || 0) * 3 - (C.stats.losses || 0) + (C.inc.pop || 0) / 1e6 * 1.5 + (C.pwr || 0) * 0.04 + tech * 6 + (C.inc.cash || 0) * 0.15 + (C.stats.taken || 0) * 20);
+}
+function rankOf(c) { const s = scoreOf(c); let r = 1; for (const o of G.C) if (o.alive && o.id !== c && scoreOf(o.id) > s) r++; return r; }
+const GOALS = [
+  { id: 'build', t: 'Постройте или улучшите здание', f: C => (C.stats.built || 0) >= 1 },
+  { id: 'queue', t: 'Закажите 3 военных юнита', f: C => (C.stats.queued || 0) >= 3 },
+  { id: 'res', t: 'Начните исследование (🔬 Наука)', f: C => (C.stats.researched || 0) >= 1 },
+  { id: 'trade', t: 'Совершите сделку на рынке 💱', f: C => (C.stats.trades || 0) >= 1 },
+  { id: 'dip', t: 'Запросите военный доступ у другой страны (🤝)', f: C => (C.stats.access || 0) >= 1 },
+  { id: 'build5', t: 'Постройте 5 зданий', f: C => (C.stats.built || 0) >= 5 },
+  { id: 'war', t: 'Объявите войну (🤝 Дипломатия)', f: C => (C.stats.wars || 0) >= 1 },
+  { id: 'cap1', t: 'Захватите первую провинцию', f: C => (C.stats.taken || 0) >= 1 },
+  { id: 'units20', t: 'Произведите 10 новых юнитов', f: C => (C.stats.trained || 0) >= 10 },
+  { id: 'cap5', t: 'Захватите 5 провинций', f: C => (C.stats.taken || 0) >= 5 },
+  { id: 'vp10', t: 'Наберите 10 победных очков ★', f: C => C.vp >= 10 },
+  { id: 'rank3', t: 'Войдите в тройку лучших держав мира', f: C => rankOf(C.id) <= 3 },
+];
+function checkGoals() {
+  G.goalsDone = G.goalsDone || [];
+  const C = G.C[G.player];
+  GOALS.forEach((g, i) => {
+    if (G.goalsDone.includes(g.id) || !g.f(C)) return;
+    G.goalsDone.push(g.id);
+    const rew = 150 + 100 * G.goalsDone.length;
+    C.res.cash += rew; C.res.elec += 15 + G.goalsDone.length * 3;
+    news('goal', `🏅 Цель выполнена: ${g.t}. Награда: 💵${rew}`, -1, [G.player], 'p');
+  });
 }

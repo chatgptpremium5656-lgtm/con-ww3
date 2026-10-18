@@ -47,6 +47,10 @@ button{font:inherit;color:var(--tx);cursor:pointer}
 #leftbar button:hover{background:#17293d;border-color:#35516f}
 #leftbar button.on{background:#1d3550;border-color:var(--acc)}
 .panel{position:absolute;background:linear-gradient(#10202f,#0b1825);border:1px solid #2c4a68;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.6);z-index:3}
+#goals{left:60px;top:52px;width:250px;padding:6px 9px;font-size:12px;background:rgba(10,22,34,.86);cursor:pointer}
+#goals h5{margin:0 0 4px;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--acc2);display:flex;justify-content:space-between}
+#goals .g{display:flex;gap:6px;padding:2px 0;color:var(--tx)}#goals .g.done{color:var(--tx2);text-decoration:line-through}
+#goals.min .g{display:none}
 #prov-panel{right:8px;top:52px;width:338px;max-height:calc(100% - 262px);overflow:auto}
 #prov-panel::-webkit-scrollbar,.scroll::-webkit-scrollbar{width:7px;height:7px}
 #prov-panel::-webkit-scrollbar-thumb,.scroll::-webkit-scrollbar-thumb{background:#2c4a68;border-radius:4px}
@@ -147,6 +151,7 @@ input[type=range]{accent-color:var(--acc)}
  #unit-panel{left:330px;width:auto;right:360px;min-width:0}
 }
 @media (max-width:760px){
+ #goals{display:none}
  #topbar{height:40px;gap:3px;padding:0 3px}
  #tb-country{min-width:0;padding:2px}#tb-country div{display:none}.flag.lg{width:34px;height:23px}
  #tb-time{min-width:62px}#tb-time b{font-size:11.5px}#tb-time small{font-size:10px}

@@ -102,7 +102,7 @@ function afterLoad() {
 function showOver() {
   overShown = true; G.paused = true;
   const d = document.createElement('div'); d.className = 'over';
-  d.innerHTML = `<h1 style="color:${G.over.win ? '#5fd35f' : '#e0503c'}">${G.over.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}</h1><p style="font-size:17px;max-width:600px">${esc(G.over.text)}</p><p class="note">${dateStr(G.hour)} · ${G.C[G.player].n}</p><div class="row">${G.over.win ? '<button class="btn pri" id="ovc">Продолжить игру</button>' : ''}<button class="btn" id="ovn">Новая игра</button></div>`;
+  d.innerHTML = `<h1 style="color:${G.over.win ? '#5fd35f' : '#e0503c'}">${G.over.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}</h1><p style="font-size:17px;max-width:600px">${esc(G.over.text)}</p><p class="note">${dateStr(G.hour)} · ${G.C[G.player].n}</p><p style="font-size:18px">🏆 Итоговый счёт: <b>${fmt(scoreOf(G.player))}</b> · место в мире: <b>${rankOf(G.player)}</b> из ${G.C.filter(c => c.alive).length}</p><div class="row">${G.over.win ? '<button class="btn pri" id="ovc">Продолжить игру</button>' : ''}<button class="btn" id="ovn">Новая игра</button></div>`;
   document.body.appendChild(d);
   const c = d.querySelector('#ovc'); if (c) c.onclick = () => { G.over = null; G.opts.win = 5; d.remove(); G.paused = false; overShown = false; };
   d.querySelector('#ovn').onclick = () => { d.remove(); showStart(); };

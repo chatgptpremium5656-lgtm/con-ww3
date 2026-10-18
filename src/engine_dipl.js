@@ -20,7 +20,7 @@ function declareWar(a, b, silent) {
   if (G.war[a * NC + b]) return 'Уже идёт война';
   if (areAllied(a, b)) return 'Нельзя воевать с союзником';
   if (!silent && G.truce && G.truce[a * NC + b] > G.hour) return 'Действует перемирие';
-  setWar(a, b);
+  setWar(a, b); if (!silent) bump(a, 'wars');
   if (!silent) news('war', `⚔ ${G.C[a].n} объявляет войну государству ${G.C[b].n}!`, G.C[b].cap, [a, b], 'g');
   addRel(a, b, -60);
   // third parties: defenders join
@@ -134,7 +134,7 @@ function inviteToAlliance(by, c) {
   joinAlliance(c, G.C[by].alliance); return r;
 }
 function requestAccess(from, to) { // `from` asks `to` for military access
-  if (relOf(from, to) >= 20 || areAllied(from, to)) { G.acc[to * NC + from] = 1; addRel(from, to, 2); return { ok: true }; }
+  if (relOf(from, to) >= 20 || areAllied(from, to)) { G.acc[to * NC + from] = 1; bump(from, 'access'); addRel(from, to, 2); return { ok: true }; }
   return { ok: false, why: 'Отказано. Нужны отношения от +20 (сейчас ' + Math.round(relOf(from, to)) + ')' };
 }
 function giveGift(a, b, res, qty) {
@@ -154,7 +154,7 @@ function trade(c, res, qty, buy) {
   if (buy) {
     const cost = priceOf(res, true) * qty;
     if (C.res.cash < cost) return 'Не хватает денег';
-    C.res.cash -= cost; C.res[res] += qty; G.market.m[res] = Math.min(3, G.market.m[res] + qty / 6000 / (BASE_PRICE[res] > 3 ? 0.5 : 1));
+    C.res.cash -= cost; C.res[res] += qty; bump(c, 'trades'); G.market.m[res] = Math.min(3, G.market.m[res] + qty / 6000 / (BASE_PRICE[res] > 3 ? 0.5 : 1));
   } else {
     if (C.res[res] < qty) return 'Не хватает ресурса';
     C.res[res] -= qty; C.res.cash += priceOf(res, false) * qty; G.market.m[res] = Math.max(0.4, G.market.m[res] - qty / 6000 / (BASE_PRICE[res] > 3 ? 0.5 : 1));
@@ -173,7 +173,7 @@ function saveGame() {
     pv: g.pv.map(p => ({ o: p.o, b: p.b, bq: p.bq, q: p.q, dmg: p.dmg, cap: p.cap, fall: p.fall, since: p.since, pop: p.pop, cyber: p.cyber || 0 })),
     U: Array.from(g.U.values()),
     rel: sparse(g.rel), war: sparse(g.war), acc: sparse(g.acc), warStart: sparse(g.warStart), wlost: sparse(g.wlost), truce: g.truce ? sparse(g.truce) : null,
-    al: g.al, news: g.news.slice(-80)
+    al: g.al, goals: g.goalsDone || [], news: g.news.slice(-80)
   };
   return JSON.stringify(o);
 }
@@ -188,7 +188,7 @@ function loadGame(str) {
   G.U = new Map();
   for (const u of o.U) { G.U.set(u.id, u); if (u.st !== 'cargo' && u.st !== 'out' && u.st !== 'back') G.at[u.loc].push(u.id); }
   G.rel = unsparse(o.rel, Int8Array); G.war = unsparse(o.war, Uint8Array); G.acc = unsparse(o.acc, Uint8Array); G.warStart = unsparse(o.warStart, Int32Array); G.wlost = unsparse(o.wlost, Int16Array); G.truce = o.truce ? unsparse(o.truce, Int32Array) : new Int32Array(NC * NC);
-  G.al = o.al; G.news = o.news; G.newsId = o.news.length ? o.news[o.news.length - 1].id || 0 : 0;
+  G.al = o.al; G.goalsDone = o.goals || []; G.news = o.news; G.newsId = o.news.length ? o.news[o.news.length - 1].id || 0 : 0;
   for (const c of G.C) { c.dirty = true; if (c.alive) { recalc(c); calcUse(c); } }
   G.totalVP = PROV.reduce((a, p) => a + p.vp, 0);
   updateVis(true);

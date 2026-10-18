@@ -215,11 +215,11 @@ function refreshHUD(force) {
   for (const n of G.news) {
     if (n.id <= UI.newsSeen) continue;
     UI.newsSeen = n.id;
-    const mine = n.f === 'p' || n.c.includes(G.player);
+    
     if (n.f === 'p' || n.f === 'g') {
       latest = n;
       if (n.f === 'p' || n.t === 'war' || n.t === 'nuke') {
-        if (n.t !== 'unit' && n.t !== 'build' || G.speed <= 2) toast(n.x, n.t === 'war' || n.t === 'nuke' || n.t === 'loss' ? (n.t === 'nuke' ? 'nuke' : 'war') : (n.t === 'capture' && n.c[0] === G.player) || n.t === 'research' ? 'good' : '', n.l);
+        if (n.t !== 'unit' && n.t !== 'build' || G.speed <= 2) toast(n.x, n.t === 'goal' ? 'good' : n.t === 'war' || n.t === 'nuke' || n.t === 'loss' ? (n.t === 'nuke' ? 'nuke' : 'war') : (n.t === 'capture' && n.c[0] === G.player) || n.t === 'research' ? 'good' : '', n.l);
         if (n.t === 'war') Snd.play('war'); else if (n.t === 'capture' || n.t === 'loss') Snd.play('alert'); else if (n.t === 'unit' || n.t === 'build' || n.t === 'research') Snd.play('ok');
         if (!UI.modal || UI.modal !== 'events') { UI.unseen++; }
       }
@@ -229,6 +229,9 @@ function refreshHUD(force) {
   if (latest) { $('ticker').textContent = `${dateStr(latest.h)} ${timeStr(latest.h)} — ${latest.x}`; $('ticker').dataset.l = latest.l; }
   const bell = $('bell'); if (UI.unseen > 0) { bell.textContent = UI.unseen > 99 ? '99+' : UI.unseen; bell.classList.remove('hidden'); } else bell.classList.add('hidden');
   if (UI.modal === 'events') { UI.unseen = 0; bell.classList.add('hidden'); }
+  { const done = G.goalsDone || []; const todo = GOALS.filter(g => !done.includes(g.id)).slice(0, 3);
+    const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Место в мире: ${rankOf(G.player)} · очки ${fmt(scoreOf(G.player))}</div>`;
+    if (UI._goalsH !== html) { gp.innerHTML = html; UI._goalsH = html; } }
   renderProvPanel(force); renderUnitPanel(force);
   if (UI.modal && (!document.activeElement || !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) renderModal(true);
 }
@@ -417,3 +420,4 @@ function act(a, d, el, e) {
 }
 $('ticker').onclick = () => { const l = +$('ticker').dataset.l; if (l >= 0) focusLoc(l); else openModal('events'); };
 $('tb-country').onclick = () => openModal('overview');
+$('goals').onclick = () => { $('goals').classList.toggle('min'); UI._goalsH = ''; };
