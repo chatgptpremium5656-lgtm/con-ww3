@@ -64,6 +64,7 @@ for (const f of geo.features) {
   c.pop += f.properties.POP_EST; c.gdp += f.properties.GDP_MD;
   if (f.properties.POP_EST > c.big) { c.big = f.properties.POP_EST; c.lx = f.properties.LABEL_X; c.ly = f.properties.LABEL_Y; c.ccode = f.properties.ADM0_A3; }
 }
+const a3toKey = {}; for (const f of geo.features) { const kk = ckey(f.properties); if (kk) a3toKey[f.properties.ADM0_A3] = kk; }
 const cty = new Int16Array(W * H).fill(-1);
 for (const f of geo.features) {
   const k = ckey(f.properties); if (!k) continue;
@@ -364,7 +365,7 @@ for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
 const cityList = [];
 for (const f of places.features) {
   const p = f.properties;
-  let k = p.ADM0_A3 === 'PSX' ? 'PSX' : p.SOV_A3;
+  let k = a3toKey[p.ADM0_A3] || (p.ADM0_A3 === 'PSX' ? 'PSX' : p.SOV_A3);
   if (k === 'SOL') k = 'SOM'; if (k === 'CYN') k = 'CYP'; if (k === 'KAS') k = 'IND';
   const x = px(p.LONGITUDE), y = py(p.LATITUDE);
   if (y < 0 || y >= H) continue;
@@ -449,11 +450,16 @@ const capProv = {};
 for (const c of cityList) if (c.cap && c.key && kidx[c.key] !== undefined && provs[c.prov].c === kidx[c.key]) {
   if (!(c.key in capProv) || c.pop > capProv[c.key].pop) capProv[c.key] = c;
 }
+{ const norm = t => (t || '').toLowerCase().replace(/[^a-z]/g, '');
+  for (const k of keys) { const pc = profiles[k] && profiles[k].cap; if (!pc) continue;
+    const cands = cityList.filter(c => c.key === k && provs[c.prov].c === kidx[k] && (norm(c.en).startsWith(norm(pc)) || norm(pc).startsWith(norm(c.en)) && norm(c.en).length > 4));
+    if (cands.length) capProv[k] = cands.sort((a, b) => b.pop - a.pop)[0]; } }
 for (const k of keys) if (!(k in capProv)) {
   // largest city in country
   const cs = cityList.filter(c => provs[c.prov].c === kidx[k]);
   if (cs.length) capProv[k] = cs[0];
 }
+for (const k of keys) if (capProv[k]) { const pp = provs[capProv[k].prov]; pp.name = capProv[k].name; if (pp.cities.length) { const i = pp.cities.indexOf(capProv[k]); if (i > 0) { pp.cities.splice(i, 1); pp.cities.unshift(capProv[k]); pp.lx = capProv[k].x; pp.ly = capProv[k].y; } } }
 // naming: dedupe + fallback names
 const nameCount = {};
 const DIRS = ['Север', 'Северо-восток', 'Восток', 'Юго-восток', 'Юг', 'Юго-запад', 'Запад', 'Северо-запад', 'Центр'];

@@ -196,6 +196,19 @@ function startResearch(c, kind, id, lvl) {
   return '';
 }
 
+function upgradeCost(u) { const c = {}, d = UNITS[u.t]; for (const k in d.cost) if (k !== 'p') c[k] = d.cost[k] * 0.45 * (G.C[u.o].gen[u.t] - u.g); return c; }
+function canUpgrade(u) { return u.g < G.C[u.o].gen[u.t] && u.loc < P && G.pv[u.loc].o === u.o && (u.st === 'idle' || u.st === 'base'); }
+function upgradeUnits(ids) {
+  let n = 0, fail = 0;
+  for (const id of ids) {
+    const u = G.U.get(id); if (!u || !canUpgrade(u)) continue;
+    const cost = upgradeCost(u);
+    if (!canAfford(u.o, cost)) { fail++; continue; }
+    pay(u.o, cost); u.g = G.C[u.o].gen[u.t]; n++;
+  }
+  return { n, fail };
+}
+
 /* ---------- movement ---------- */
 function canEnter(c, p) {
   const o = G.pv[p].o;
@@ -677,6 +690,7 @@ function checkVictory() {
   let vp = 0; for (const m of members) vp += G.C[m].vp;
   G.myVP = vp;
   if (vp >= G.totalVP * G.opts.win) G.over = { win: true, text: `Ваш ${p.alliance >= 0 ? 'альянс' : 'мир'} контролирует ${Math.round(vp / G.totalVP * 100)}% победных очков мира.` };
+  if (G.over) return;
   // hostile alliance wins -> defeat
   for (const al of G.al) {
     if (p.alliance === al.id) continue;

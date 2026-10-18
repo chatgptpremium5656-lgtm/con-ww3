@@ -356,6 +356,7 @@ function renderUnitPanel(force) {
   if (hasTr) h += `<button class="btn" data-act="loadtr" data-tip="Загрузить сухопутные части из этой провинции на выбранные транспорты">📦 Грузить</button><button class="btn" data-act="unloadtr">⬇ Высадить</button>`;
   if (hasCar) h += `<button class="btn" data-act="loadcar" data-tip="Погрузить авиацию из порта на авианосец">✈ Принять авиацию</button>`;
   if (hasLand && !hasTr) h += `<button class="btn" data-act="boardtr" data-tip="Погрузиться на транспорт в этой провинции">🚢 На борт</button>`;
+  const upg = us.filter(u => canUpgrade(u)); if (upg.length) { const tot = {}; for (const u of upg) { const cc = upgradeCost(u); for (const k in cc) tot[k] = (tot[k] || 0) + cc[k]; } h += `<button class="btn" data-act="upgrade" data-tip="Модернизировать ${upg.length} юн. до текущего поколения<br>${costText(tot)}">⬆ Модернизация (${upg.length})</button>`; }
   h += `</div>`;
   if (UI._up !== h) { el.innerHTML = h; UI._up = h; }
 }
@@ -390,6 +391,7 @@ function act(a, d, el, e) {
     case 'dipl': UI.dc = +d.c; openModal('diplomacy'); break;
     case 'mapmode': MV.mode = d.m; updateModeBtns(); MV.dirty = true; miniDirty = true; break;
     case 'mapmodes': openModal('layers'); break;
+    case 'upgrade': { const r = upgradeUnits([...SEL.units]); toast(r.n ? `Модернизировано: ${r.n}` + (r.fail ? `, не хватило ресурсов: ${r.fail}` : '') : 'Не хватает ресурсов', r.n ? 'good' : 'war'); UI._up = ''; renderUnitPanel(); break; }
     case 'loadtr': {
       const trs = [...SEL.units].map(id => G.U.get(id)).filter(u => u && u.t === 'transport');
       let n = 0; for (const t of trs) { const cand = unitsAt(t.loc).filter(u => u.o === G.player && UNITS[u.t].dom === 'land' && u.st === 'idle').map(u => u.id); n += loadOnTransport(t.id, cand); }

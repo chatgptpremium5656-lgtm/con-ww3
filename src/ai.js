@@ -104,6 +104,7 @@ function aiProduction(C) {
 
 /* ---------- research ---------- */
 function aiResearch(C) {
+  if (C.res.cash > 600) { let n = 0; for (const [, u] of G.U) { if (u.o !== C.id || !canUpgrade(u) || R() > 0.25) continue; if (upgradeUnits([u.id]).n && ++n >= 4) break; } }
   const opts = researchOptions(C.id);
   const used = {}; for (const [, u] of G.U) if (u.o === C.id) used[u.t] = (used[u.t] || 0) + 1;
   for (const br in BRANCHES) {
