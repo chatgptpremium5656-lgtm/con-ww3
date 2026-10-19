@@ -183,3 +183,41 @@ input[type=range]{accent-color:var(--acc)}
  .clist{max-height:32vh}
  .title{font-size:24px}
 }
+
+/* Headquarters and accessibility */
+body{font-size:var(--game-font,13px)}
+body[data-theme=light]{--bg:#eef3f7;--bg2:#f7fafc;--bg3:#dce7ef;--tx:#172d43;--tx2:#425a70;--line:#9eb3c5;--ok:#21643a;--bad:#a92d23}
+body[data-theme=military]{--bg:#172119;--bg2:#202d22;--bg3:#2a3b2b;--tx:#e3ead2;--tx2:#b0c09f;--line:#526249;--acc:#c8b76b}
+.cx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:12px;margin:12px 0}
+.cx-card{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:14px;overflow-wrap:anywhere}
+.cx-card h3{font-size:1.12em;margin:0 0 10px}.cx-card p{margin:8px 0}.cx-card .btn{margin:6px 5px 0 0}
+.cx-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:10px 0}
+.cx-fields label{display:flex;gap:8px;align-items:center;justify-content:space-between}.cx-fields input:not([type=checkbox]){max-width:110px}
+.cx-table{overflow-x:auto}.cx-table .t{min-width:600px}.cx-danger{background:rgba(224,80,60,.17)}
+.cx-chart{margin:16px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg2)}
+.cx-chart svg{display:block;max-height:240px;width:100%}.cx-chart text{font:12px sans-serif;fill:var(--tx2)}
+.cx-definition{padding:10px;border-bottom:1px solid var(--line)}.cx-definition summary{cursor:pointer;font-weight:600}
+.cx-search-list{display:grid;gap:7px}.cx-search-list button{text-align:left;padding:12px;display:flex;justify-content:space-between;gap:12px}
+.cx-search-list small{color:var(--tx2)}#cx-search,#cx-guide-search{width:100%;padding:12px;font-size:1.1em}
+.cx-journal{padding-left:24px}.cx-journal li{padding:9px 0;border-bottom:1px solid var(--line)}.cx-journal time{color:var(--tx2)}
+#campaign-bar{position:absolute;top:51px;left:74px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;z-index:3;max-width:calc(100% - 90px)}
+#campaign-bar .btn{background:var(--bg2)}.cx-version{color:var(--tx2);font-size:11px;background:var(--bg);padding:5px;border-radius:4px}
+.rchip.running-out{border-color:#ffa343;border-style:dashed}.rchip.running-out .v::after{content:' ⚠'}
+.cx-province-extra .row,.cx-unit-extra .row{flex-wrap:wrap}.cx-unit-extra{width:100%;padding:9px;border-top:1px solid var(--line)}
+.cx-start-options{border:1px solid var(--line);border-radius:6px;padding:9px}.cx-start-options summary{cursor:pointer}
+.high-contrast #map{filter:contrast(1.18) saturate(.65)}.high-contrast .btn,.high-contrast .panel{border-width:2px}.high-contrast .neg{color:#ffb071}
+.simple-ui #goals,.simple-ui #tut{display:none}.simple-ui #leftbar span{display:none}.simple-ui #campaign-bar .cx-version{display:none}
+.photo-mode #hud,.photo-mode #tooltip,.photo-mode #modal-back{visibility:hidden}.photo-mode #map{cursor:none}
+.reduce-motion *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+.btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+.tabs{overflow-x:auto;flex-wrap:nowrap!important;flex-shrink:0}.tabs button{white-space:nowrap;min-height:38px}
+body[data-theme=light] #modal,body[data-theme=light] .panel{background:var(--bg);color:var(--tx)}
+body[data-theme=light] .btn{background:#e2ebf3;color:#172d43;border-color:#809bb1}
+body[data-theme=light] .btn.pri{background:#e6b85d;color:#201400}body[data-theme=light] input,body[data-theme=light] select{background:white;color:#172d43}
+@media(max-width:700px){#campaign-bar{left:8px;top:94px;max-width:calc(100% - 16px)}#campaign-bar .btn{font-size:12px;min-height:36px;padding:6px}#campaign-bar .cx-version{display:none}.cx-card{padding:11px}.cx-fields{grid-template-columns:1fr}.cx-card .btn,.cx-unit-extra .btn,.cx-province-extra .btn{min-height:44px}.cx-search-list button{min-height:48px}#modal .mb{padding-bottom:30px}.cx-unit-extra{max-height:130px;overflow:auto}.cx-start-options{margin-top:8px}}
+
+/* Settings may be opened above the start screen. */
+#modal-back{z-index:50}
+/* Keep the new toolbar clear of objectives, tutorials and the mobile rail. */
+#goals{top:92px}#tut{top:92px}
+@media(max-width:700px){#campaign-bar{left:48px;max-width:calc(100% - 56px)}#legend,#tut{top:138px}}

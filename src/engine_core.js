@@ -66,9 +66,9 @@ const CCOLORS = assignColors();
 function ustat(u) {
   const d = UNITS[u.t], c = G.C[u.o], g = u.g;
   return {
-    atk: GEN_ATK[g] * (DOCS[c.doc] ? DOCS[c.doc].atk : 1) * (c.short && (c.short.supp || c.short.fuel) ? 0.8 : 1),
-    arm: d.arm + GEN_ARM[g] + (DOCS[c.doc] ? DOCS[c.doc].arm : 0),
-    spd: d.spd * GEN_SPD[g] * (1 + 0.04 * (c.techs.logist || 0))
+    atk: campaignAttack(u) * GEN_ATK[g] * (DOCS[c.doc] ? DOCS[c.doc].atk : 1) * (c.short && (c.short.supp || c.short.fuel) ? 0.8 : 1),
+    arm: d.arm + GEN_ARM[g] + (u.stance === 'defend' ? 1 : 0) + Math.min(2, (u.entrench || 0) / 12) + (DOCS[c.doc] ? DOCS[c.doc].arm : 0),
+    spd: campaignSpeed(u) * d.spd * GEN_SPD[g] * (1 + 0.04 * (c.techs.logist || 0))
   };
 }
 function unitAvail(c, t) { // can country c build unit type t (tech-wise)?
@@ -105,7 +105,7 @@ function newGameShell(opts) {
   });
   // provinces
   PROV.forEach((p, i) => {
-    G.pv.push({ id: i, o: p.c, b: { infra: 0, barracks: 0, factory: 0, airfield: 0, naval: 0, aa: 0, fort: 0, radar: 0, eco: 0, silo: 0 }, bq: null, q: [], dmg: 0, cap: null, fall: 0, since: -9999, pop: p.pop });
+    G.pv.push({ id: i, o: p.c, b: { infra: 0, barracks: 0, factory: 0, airfield: 0, naval: 0, aa: 0, fort: 0, radar: 0, eco: 0, silo: 0, depot: 0 }, bq: null, q: [], dmg: 0, cap: null, fall: 0, since: -9999, pop: p.pop });
   });
   for (const pv of G.pv) G.C[pv.o].provs.push(pv.id);
   G.totalVP = PROV.reduce((a, p) => a + p.vp, 0);
@@ -122,6 +122,8 @@ function newGame(opts) {
   for (const [a, b] of sc.wars) {
     if (cidx[a] !== undefined && cidx[b] !== undefined && !G.war[cidx[a] * NC + cidx[b]]) { setWar(cidx[a], cidx[b]); addRel(cidx[a], cidx[b], -70); }
   }
+  initCampaign();
+  if (G.opts.stock && G.opts.stock !== 1) for (const k of RES) G.C[G.player].res[k] *= G.opts.stock;
   G.vp0 = G.C[G.player].vp;
   if (G.opts.doc && DOCS[G.opts.doc]) G.C[G.player].doc = G.opts.doc;
   updateVis(true);
@@ -277,6 +279,7 @@ function place(u, loc) { atRemove(u); u.loc = loc; G.at[loc].push(u.id); }
 function killUnit(u, by) {
   if (!G.U.has(u.id)) return;
   if (u.st !== 'cargo' && u.st !== 'out' && u.st !== 'back') atRemove(u); else if (u.st === 'cargo') { const c = G.U.get(u.carrier); if (c) { const i = c.cargo.indexOf(u.id); if (i >= 0) c.cargo.splice(i, 1); } }
+  campaignLoss(u);
   G.U.delete(u.id);
   G.C[u.o].stats.losses++;
   if (by !== undefined && G.C[by]) G.C[by].stats.kills++;
@@ -284,7 +287,7 @@ function killUnit(u, by) {
 }
 
 /* economy helpers */
-function unitMult(c) { const C = G.C[c]; return (DOCS[C.doc] ? DOCS[C.doc].cost : 1) * ((GOV_FX[C.gov] || GOV_FX.autocracy).unit); }
+function unitMult(c) { const C = G.C[c]; return (1 + (C.inflation || 0)) * (G.opts.diff === 'realism' ? 1.2 : 1) * (DOCS[C.doc] ? DOCS[C.doc].cost : 1) * ((GOV_FX[C.gov] || GOV_FX.autocracy).unit); }
 function canAfford(c, cost, mult = 1) { for (const k in cost) { const r = RES_SHORT[k]; if (G.C[c].res[r] < cost[k] * mult - 1e-9) return false; } return true; }
 function pay(c, cost, mult = 1) { for (const k in cost) G.C[c].res[RES_SHORT[k]] -= cost[k] * mult; }
 function refund(c, cost, mult = 1) { for (const k in cost) G.C[c].res[RES_SHORT[k]] += cost[k] * mult; }
@@ -300,7 +303,8 @@ function provProd(c, p, out) {
   let occ = 1;
   if (pv.since > -9000) { const days = (G.hour - pv.since) / 24; occ = 0.35 + 0.65 * Math.min(1, days / 25); }
   const dmg = 1 - pv.dmg / 100 * 0.75, fall = 1 - Math.min(0.9, pv.fall);
-  const m = eco * inf * occ * dmg * fall * (pv.cyber > G.hour ? 0.35 : 1);
+  const loyalty = Math.min(1.075, 0.7 + 0.3 * (pv.loyalty === undefined ? 80 : pv.loyalty) / 80);
+  const m = eco * inf * occ * dmg * fall * loyalty * (pv.cyber > G.hour ? 0.35 : 1);
   const r = pr.res.map(v => Math.min(5, v));
   out.food += FOOD_T[r[0]] * m * (1 + 0.1 * (t.agri || 0));
   out.comp += ORE_T[r[1]] * m * (1 + 0.1 * (t.mine || 0));
@@ -310,9 +314,9 @@ function provProd(c, p, out) {
   out.elec += TECH_T[r[5]] * m * (1 + 0.12 * (t.elect || 0));
   // cash: from gdp share
   const co0 = CTY[c];
-  out.cash += pv.cashBase * (1 + 0.04 * b.infra + 0.03 * b.eco) * occ * dmg * fall * (1 + 0.1 * (t.indus || 0));
+  out.cash += (pv.corrupt > G.hour ? 0.6 : 1) * pv.cashBase * (1 + 0.04 * b.infra + 0.03 * b.eco) * occ * dmg * fall * (1 + 0.1 * (t.indus || 0)) * (co.tax || 1) * loyalty;
   out.pop += pv.pop;
-  if (pv.corrupt > G.hour) out.cash -= pv.cashBase * 0.4;
+
 }
 function recalc(c) {
   const co = typeof c === 'number' ? G.C[c] : c;

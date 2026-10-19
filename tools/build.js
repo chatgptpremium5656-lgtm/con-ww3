@@ -2,7 +2,7 @@
 // Bundles src/* into a single self-contained index.html (minified with terser when available)
 const fs = require('fs'), path = require('path');
 const R = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
-const files = ['src/world.js', 'src/world_decode.js', 'src/data.js', 'src/engine_core.js', 'src/engine_sim.js', 'src/engine_dipl.js', 'src/ai.js', 'src/gfx.js', 'src/render.js', 'src/ui_core.js', 'src/ui_modals.js', 'src/ui_start.js'];
+const files = ['src/world.js', 'src/world_decode.js', 'src/data.js', 'src/engine_core.js', 'src/engine_sim.js', 'src/engine_dipl.js', 'src/ai.js', 'src/campaign.js', 'src/gfx.js', 'src/render.js', 'src/ui_core.js', 'src/ui_modals.js', 'src/ui_start.js', 'src/ui_campaign.js'];
 let js = files.map(R).join('\n');
 let css = R('src/style.css');
 (async () => {

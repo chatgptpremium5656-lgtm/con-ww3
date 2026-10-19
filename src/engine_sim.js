@@ -23,7 +23,7 @@ function tick() {
   for (const pv of G.pv) { if (pv.dmg > 0) pv.dmg = Math.max(0, pv.dmg - 0.03); if (pv.fall > 0) pv.fall = Math.max(0, pv.fall - 0.0008); }
   if (h % 6 === 0) { for (const c of G.C) if (c.alive) { if (c.dirty || h % 24 === 0) recalc(c); calcUse(c); } updateVis(); }
   if (h % 24 === 0) dayTick();
-  if (h % 6 === 0) { checkGoals(); if (G.autoDef !== false) autoDefend(); }
+  if (h % 6 === 0) { checkGoals(); if (!G.opts.observer && G.autoDef !== false) autoDefend(); }
   // AI scheduling
   for (const c of G.C) {
     if (!c.alive || !c.ai) continue;
@@ -33,6 +33,7 @@ function tick() {
     if ((h + c.id) % 24 === 17) aiResearch(c);
     if ((h + c.id * 7) % 240 === 3) aiDiplomacy(c);
   }
+  campaignTick();
   if (G.fx.length > 200) G.fx.splice(0, G.fx.length - 200);
 }
 
@@ -54,7 +55,7 @@ function dayTick() {
     if (G.C[a].alliance >= 0 && G.C[a].alliance === G.C[b].alliance) v = Math.min(100, v + 0.2);
     G.rel[i] = G.rel[j] = clamp(v, -100, 100);
   }
-  if (G.autoBuy !== false && G.C[G.player].alive) aiTrade(G.C[G.player]);
+  if (!G.opts.observer && G.autoBuy !== false && G.C[G.player].alive) campaignAutoBuy(G.C[G.player]);
   checkVictory();
 }
 
@@ -94,6 +95,7 @@ function productionTick() {
     }
     if (pv.q.length) {
       const it = pv.q[0], d = UNITS[it.t];
+      if (d.dom === 'sea' && G.campaign && portBlockaded(c.id, i)) continue;
       const lvl = pv.b[d.req[0]];
       if (lvl < d.req[1]) { continue; } // building destroyed
       const sp = (1 + 0.12 * (lvl - d.req[1])) * (pv.dmg > 50 ? 0.5 : 1);
@@ -130,6 +132,7 @@ function canQueue(p, t) {
   if (!c.alive) return 'Страна уничтожена';
   if (pv.b[d.req[0]] < d.req[1]) return `Нужно: ${BLD[d.req[0]].n} ур. ${d.req[1]}`;
   if (!unitAvail(c.id, t)) return 'Нужны технологии';
+  if (d.dom === 'sea' && G.campaign && portBlockaded(c.id, p)) return 'Порт блокирован вражеским флотом';
   if (pv.q.length >= 5) return 'Очередь полна';
   if (d.dom === 'sea' && !isCoastal(p)) return 'Нужен выход к морю';
   if (!canAfford(c.id, d.cost, unitMult(c.id))) return 'Не хватает ресурсов';
@@ -272,7 +275,7 @@ function findPath(u, from, to) {
   const path = []; let c = to; while (c !== from) { path.push(c); c = prev[c]; }
   return path.reverse();
 }
-function orderMove(ids, dest) {
+function orderMove(ids, dest, continuing) {
   let n = 0, fail = 0;
   for (const id of ids) {
     const u = G.U.get(id); if (!u) continue;
@@ -287,13 +290,14 @@ function orderMove(ids, dest) {
       u.leg = { fx: u.leg.fx + (u.leg.tx - u.leg.fx) * u.leg.done / u.leg.d, fy: u.leg.fy + (u.leg.ty - u.leg.fy) * u.leg.done / u.leg.d, tx: lx(from), ty: ly(from), d: Math.max(0.1, u.leg.done), done: 0, to: from, back: true };
       path = [from].concat(path);
     }
+    if (!continuing) { u.waypoints = []; u.hold = false; u.entrench = 0; }
     u.path = path; u.lock = false; if (u.o === G.player && path.length) bump(u.o, 'moved');
     u.st = path.length || u.leg ? 'move' : 'idle';
     n++;
   }
   return { n, fail };
 }
-function stopUnits(ids) { for (const id of ids) { const u = G.U.get(id); if (!u) continue; if (u.st === 'move') { u.path = u.leg ? [u.leg.to] : []; if (!u.leg) u.st = 'idle'; } } }
+function stopUnits(ids) { for (const id of ids) { const u = G.U.get(id); if (!u) continue; u.waypoints = []; u.hold = true; if (u.st === 'move') { u.path = u.leg ? [u.leg.to] : []; if (!u.leg) u.st = 'idle'; } } }
 function hostileAt(u, loc) {
   const a = G.at[loc];
   for (let i = 0; i < a.length; i++) { const e = G.U.get(a[i]); if (e && e.o !== u.o && G.war[u.o * NC + e.o] && e.st !== 'base' && e.st !== 'cargo' && UNITS[e.t].dom !== 'msl') return true; }
@@ -491,6 +495,7 @@ function missileImpact(u) {
       pv.q = []; G.C[owner].dirty = true;
       for (const o of G.C) { if (!o.alive || o.id === u.o) continue; const i = o.id * NC + u.o; G.rel[i] = G.rel[u.o * NC + o.id] = clamp(G.rel[i] - (o.id === owner ? 60 : 25), -100, 100); }
       G.stats.nukes++;
+      if (G.campaign) G.C[u.o].reputation = Math.max(0, G.C[u.o].reputation - 25);
       news('nuke', `☢ ЯДЕРНЫЙ УДАР! ${G.C[u.o].n} → ${PROV[tgt].name} (${G.C[owner].n})`, tgt, [u.o, owner], 'g');
     }
     G.fx.push({ t: 'nuke', x: lx(tgt), y: ly(tgt), h: G.hour });
@@ -587,7 +592,7 @@ function fightAt(loc) {
       tgt = e; w = ww; break;
     }
     if (!tgt) continue;
-    let dm = w * KDMG * st.atk * (0.35 + 0.65 * a.hp / 100) * (0.6 + 0.4 * a.mor / 100) * rr(0.75, 1.25);
+    let dm = w * KDMG * (G.opts.diff === 'realism' ? 1.25 : 1) * st.atk * (0.35 + 0.65 * a.hp / 100) * (0.6 + 0.4 * a.mor / 100) * rr(0.75, 1.25);
     const te = ustat(tgt);
     dm *= 100 / (100 + 14 * te.arm);
     if (tgt.st === 'base' && UNITS[tgt.t].dom === 'air') dm *= 1.4;
@@ -601,6 +606,7 @@ function fightAt(loc) {
   }
   G.bat.set(loc, G.hour);
   G.stats.battles++;
+  battleReport(loc, arena, dmgMap);
   for (const [e, dm] of dmgMap) {
     e.hp -= dm; e.mor = Math.max(0, e.mor - dm * 0.45);
     if (e.hp <= 0) {
@@ -670,7 +676,7 @@ function captureTick() {
   // naval morale + repair in port
   for (const [, u] of G.U) {
     if (UNITS[u.t].dom === 'sea' && u.loc < P && G.pv[u.loc].b.naval > 0 && u.hp < 100 && G.pv[u.loc].o === u.o) u.hp = Math.min(100, u.hp + 0.7);
-    else if (UNITS[u.t].dom === 'land' && u.hp < 100 && u.st !== 'move' && G.pv[u.loc] && (G.pv[u.loc].o === u.o) && !G.C[u.o].short.supp) u.hp = Math.min(100, u.hp + 0.12 + 0.05 * G.pv[u.loc].b.barracks);
+    else if (UNITS[u.t].dom === 'land' && u.hp < 100 && u.st !== 'move' && G.pv[u.loc] && (G.pv[u.loc].o === u.o) && !G.C[u.o].short.supp && supplied(u) && G.bat.get(u.loc) !== G.hour) u.hp = Math.min(100, u.hp + 0.12 + 0.05 * G.pv[u.loc].b.barracks);
     if (G.C[u.o].short.food || G.C[u.o].short.supp) { u.mor = Math.max(5, u.mor - 0.12); }
   }
 }
@@ -680,6 +686,7 @@ function captureProv(p, by) {
   const O = G.C[old], X = G.C[by];
   O.provs.splice(O.provs.indexOf(p), 1); X.provs.push(p);
   G.ownVer = (G.ownVer || 0) + 1;
+  pv.loyalty = by === PROV[p].c ? 60 : 35;
   pv.o = by; pv.since = G.hour; pv.cap = null; pv.q = []; pv.bq = null; pv.dmg = Math.min(100, pv.dmg + 20);
   for (const b of ['factory', 'airfield', 'naval', 'silo', 'barracks', 'aa']) if (pv.b[b] > 0 && R() < 0.4) pv.b[b]--;
   for (const id of G.at[p].slice()) { const u = G.U.get(id); if (!u) continue; const d = UNITS[u.t]; if (u.o === old || (areAllied(u.o, old) && G.war[u.o * NC + by])) { if (d.dom !== 'land') killUnit(u, by); } }
@@ -705,9 +712,10 @@ function eliminate(c, by) {
   if (C.alliance >= 0) { const al = G.al[C.alliance]; al.members = al.members.filter(m => m !== c); if (al.leader === c && al.members.length) al.leader = al.members[0]; C.alliance = -1; }
   for (let o = 0; o < NC; o++) { G.war[c * NC + o] = G.war[o * NC + c] = 0; }
   news('elim', `${C.n} прекратила существование.`, -1, [c], 'g');
-  if (c === G.player && !G.over) G.over = { win: false, text: 'Ваше государство разгромлено.' };
+  if (c === G.player && !G.opts.observer && !G.over) G.over = { win: false, text: 'Ваше государство разгромлено.' };
 }
 function checkVictory() {
+  if (G.opts.observer) return;
   if (G.over) return;
   // alliance (or country) victory points
   const p = G.C[G.player];
@@ -743,7 +751,7 @@ function updateVis(force) {
     if (u.st === 'cargo') continue;
     const d = UNITS[u.t];
     if (d.dom === 'msl') continue;
-    bfs(u.loc, Math.max(0, d.vis - 1) + (radar >= 3 ? 1 : 0) + (u.st === 'patrol' ? 1 : 0));
+    bfs(u.loc, Math.max(0, d.vis - 1 - (G.campaign && isNight(u.loc) ? 1 : 0)) + (radar >= 3 ? 1 : 0) + (u.st === 'patrol' ? 1 : 0));
   }
 }
 function isVisible(u) {
@@ -853,7 +861,7 @@ function autoDefend() {
     for (const id of G.at[p]) { const u = G.U.get(id); if (!u || UNITS[u.t].dom !== 'land' || u.st === 'cargo') continue; if (G.war[G.player * NC + u.o]) enemy++; else if (u.o === G.player) own++; }
     if (!enemy || own >= enemy) continue;
     const near = [];
-    for (const [, u] of G.U) { if (u.o !== G.player || UNITS[u.t].dom !== 'land' || u.st !== 'idle' || u.loc === p || u.loc >= P) continue; const d = dist(u.loc, p); if (d < 220) near.push([d, u]); }
+    for (const [, u] of G.U) { if (u.o !== G.player || u.hold || u.repair || UNITS[u.t].dom !== 'land' || u.st !== 'idle' || u.loc === p || u.loc >= P) continue; const d = dist(u.loc, p); if (d < 220) near.push([d, u]); }
     near.sort((a, b) => a[0] - b[0]);
     const send = near.slice(0, Math.max(2, enemy + 1)).map(x => x[1].id);
     if (send.length) { const r = orderMove(send, p); if (r.n) note(G.player, 'unit', `🛡 Авто-оборона: ${r.n} юн. спешат в ${PROV[p].name}`, p); }

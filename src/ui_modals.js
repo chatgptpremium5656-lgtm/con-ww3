@@ -8,12 +8,14 @@ $('modal-back').addEventListener('mousedown', e => { if (e.target.id === 'modal-
 
 function renderModal(keepScroll) {
   const m = UI.modal; if (!m) return;
-  const box = $('modal'); const mb0 = box.querySelector('.mb'); const st = keepScroll && mb0 ? mb0.scrollTop : 0;
+  const box = $('modal'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', TITLES[m]); const mb0 = box.querySelector('.mb'); const st = keepScroll && mb0 ? mb0.scrollTop : 0;
   const sm = m === 'menu' || m === 'layers' || m === 'tutorial';
   box.className = sm ? 'sm' : '';
   const tab = UI.tab[m] || (TABS[m] ? TABS[m][0][0] : '');
   let body = '';
   switch (m) {
+    case 'command': body = commandHTML(tab); break;
+    case 'search': body = searchHTML(); break;
     case 'overview': body = overviewHTML(tab); break;
     case 'army': body = armyHTML(tab); break;
     case 'research': body = researchHTML(); break;
@@ -26,7 +28,7 @@ function renderModal(keepScroll) {
     case 'tutorial': body = tutorialHTML(); break;
   }
   let h = `<div class="mh"><h2>${TITLES[m]}</h2><button class="btn" data-act="closemodal">✕ Закрыть</button></div>`;
-  if (TABS[m]) h += `<div class="tabs">${TABS[m].map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
+  if (TABS[m] && G) h += `<div class="tabs">${TABS[m].map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
   h += `<div class="mb scroll">${body}</div>`;
   if (m === 'diplomacy') { const l = box.querySelector('#dlist'); UI._dlistScroll = l ? l.scrollTop : UI._dlistScroll; }
   box.innerHTML = h;
@@ -158,6 +160,7 @@ function diplHTML() {
   h += `</div>`;
   if (!war) h += `<div class="row" style="margin-top:10px;flex-wrap:wrap"><span>🎁 Подарок:</span><select id="giftres">${['cash', 'food', 'supp', 'fuel', 'comp', 'elec', 'rare'].map(k => `<option value="${k}">${RES_INFO[k].n}</option>`).join('')}</select><input type="number" id="giftqty" value="100" min="1" style="width:90px"><button class="btn" data-act="dgift">Отправить (+отношения)</button></div>`;
   h += `<div id="dmsg" class="note" style="margin-top:10px;min-height:18px">${UI.dmsg || ''}</div></div>`;
+  h += extraDiplomacyHTML(c);
   return h + '</div></div>';
 }
 function dmsg(t, bad) { UI.dmsg = `<span style="color:${bad ? '#ff9a80' : '#8fe0a8'}">${t}</span>`; renderModal(true); }
@@ -225,7 +228,7 @@ function menuHTML() {
   for (const n of [1, 2, 3]) { const m = slotInfo(n); h += `<div class="row"><button class="btn" style="flex:1" data-act="save" data-n="${n}">💾 Сохранить в слот ${n}</button><button class="btn" style="flex:1" data-act="loadslot" data-n="${n}" ${m ? '' : 'disabled'}>📂 ${m ? esc(m.t) : 'пусто'}</button></div>`; }
   h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${G.autoBuy === false ? '' : 'checked'} data-act="optauto"> Авто-закупка дефицита</label><label><input type="checkbox" ${UI.autoPause === false ? '' : 'checked'} data-act="optap"> Автопауза при нападении</label><label><input type="checkbox" ${G.autoDef === false ? '' : 'checked'} data-act="optdef"> Авто-оборона</label><label><input type="checkbox" ${UI.tut >= 0 ? 'checked' : ''} data-act="opttut"> Обучение</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
   h += `<div class="row"><button class="btn danger" style="flex:1" data-act="newgame">⟲ Новая игра</button></div></div>`;
-  return h;
+  return h + `<p class="note">Версия ${GAME_VERSION} · ${cxButton('settings', 'Настройки и перенос сохранений')}${cxButton('photo', 'Режим снимка (Esc — выход)')}</p>`;
 }
 function layersHTML() { return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${MODES.map(([m, i, t]) => `<button class="btn ${MV.mode === m ? 'pri' : ''}" data-act="mapmode" data-m="${m}">${i} ${t}</button>`).join('')}</div>`; }
 
@@ -240,6 +243,7 @@ function doLoad(key) {
 
 /* ---------- modal actions ---------- */
 window.actModal = function (a, d, el, e) {
+  if (G?.opts.observer && ['dwar', 'dpeace', 'daccess', 'dgift', 'dinvite', 'djoin', 'dcreate', 'dleave', 'trade', 'research'].includes(a)) { toast('В режиме наблюдателя действует ИИ', 'war'); return; }
   switch (a) {
     case 'tab': UI.tab[d.m] = d.t; renderModal(false); break;
     case 'focus': if (+d.l >= 0) { closeModal(); focusLoc(+d.l, 3.2); if (+d.l < P) selectProv(+d.l); } break;
@@ -265,7 +269,7 @@ window.actModal = function (a, d, el, e) {
       if (ok) { joinAlliance(G.player, al.id); dmsg('Вы вступили в альянс «' + al.n + '»'); } else dmsg('Альянс отклонил заявку (нужны отношения от +30 и мир со всеми членами)', true); break;
     }
     case 'dcreate': { const n = ($('alname').value || '').trim().slice(0, 30); createAlliance(G.player, n); renderModal(true); break; }
-    case 'dleave': leaveAlliance(G.player); renderModal(true); break;
+    case 'dleave': leaveAlliance(G.player); toast('Выход из альянса запланирован через 72 часа'); renderModal(true); break;
     case 'trade': { const err = trade(G.player, d.r, +d.q, d.b === '1'); if (err) toast(err, 'war'); else Snd.play('ok'); renderModal(true); break; }
     case 'save': doSave(+d.n); renderModal(true); break;
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;

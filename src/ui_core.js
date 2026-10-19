@@ -13,9 +13,9 @@ const Snd = {
     try {
       if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       const c = this.ctx, t = c.currentTime; const o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination);
-      const S = { click: [520, 'square', 0.04, 0.06], ok: [660, 'triangle', 0.08, 0.12], alert: [330, 'sawtooth', 0.07, 0.25], war: [110, 'sawtooth', 0.15, 0.6], boom: [70, 'sawtooth', 0.07, 0.35], nuke: [40, 'sawtooth', 0.3, 2.2], err: [180, 'square', 0.05, 0.15] }[k]; if (!S) return;
+      const S = { calm1: [130.81, 'sine', 0.025, 2.6], calm2: [164.81, 'sine', 0.02, 2.6], calm3: [196, 'sine', 0.02, 2.6], click: [520, 'square', 0.04, 0.06], ok: [660, 'triangle', 0.08, 0.12], alert: [330, 'sawtooth', 0.07, 0.25], war: [110, 'sawtooth', 0.15, 0.6], boom: [70, 'sawtooth', 0.07, 0.35], nuke: [40, 'sawtooth', 0.3, 2.2], err: [180, 'square', 0.05, 0.15] }[k]; if (!S) return;
       o.type = S[1]; o.frequency.setValueAtTime(S[0], t); if (k === 'boom' || k === 'nuke') o.frequency.exponentialRampToValueAtTime(20, t + S[3]); if (k === 'ok') o.frequency.setValueAtTime(880, t + 0.06);
-      g.gain.setValueAtTime(S[2], t); g.gain.exponentialRampToValueAtTime(0.0001, t + S[3]); o.start(t); o.stop(t + S[3]);
+      g.gain.setValueAtTime(S[2] * (typeof PREF === 'undefined' ? 0.6 : PREF.volume), t); g.gain.exponentialRampToValueAtTime(0.0001, t + S[3]); o.start(t); o.stop(t + S[3]);
     } catch (e) { }
   }
 };
@@ -77,11 +77,17 @@ function hostileLoc(loc) {
   for (const id of G.at[loc]) { const u = G.U.get(id); if (u && G.war[G.player * NC + u.o] && isVisible(u)) return true; }
   return false;
 }
-function issueOrder(hit, mode) {
+function issueOrder(hit, mode, append) {
+  if (G.opts.observer) { toast('Наблюдатель не отдаёт приказы', 'war'); return; }
   const ids = [...SEL.units].filter(id => G.U.has(id)); if (!ids.length) return;
   const land = [], sea = [], air = [], msl = [];
   for (const id of ids) { const u = G.U.get(id); const d = UNITS[u.t].dom; (d === 'land' ? land : d === 'sea' ? sea : d === 'air' ? air : msl).push(id); }
   const loc = hitLoc(hit); let msgs = [];
+  if (append && !mode) {
+    let n = 0;
+    for (const id of land.concat(sea)) { const u = G.U.get(id); const last = u.waypoints?.at(-1) ?? u.path.at(-1) ?? u.loc; const path = findPath(u, last, loc); if (path) { if (u.st === 'move') { u.waypoints = u.waypoints || []; u.waypoints.push(loc); } else orderMove([id], loc); n++; } }
+    toast(`Добавлено точек маршрута: ${n}`, n ? 'good' : 'war'); MV.dirty = true; return;
+  }
   if (land.length && (!mode || mode === 'move')) {
     if (hit.k === 'p') { const r = orderMove(land, loc); if (r.n) msgs.push(`${r.n} сухопутных → ${PROV[loc].name}`); if (r.fail) msgs.push(`${r.fail} не могут добраться (нужна война/доступ или нет сухопутного пути)`); }
     else msgs.push('Сухопутные войска не могут идти по морю — используйте транспорт');
@@ -117,17 +123,17 @@ function wireMap() {
       else { if (ch.loc < P) selectProv(ch.loc); else selectSea(ch.loc - P); }
       return;
     }
-    const [wx, wy] = s2w(x, y); const hit = pickAt(wx, wy);
+    const [wx, wy] = s2w(x, y); const hit = pickAt(wx, wy, e?.changedTouches ? 12 / MV.cam.z : 0);
     if (!hit) { clearSel(); return; }
     Snd.play('click');
     if (!(e && e.shiftKey)) SEL.units.clear();
     if (hit.k === 'p') selectProv(hit.id); else selectSea(hit.id);
     renderUnitPanel(); MV.dirty = true;
   };
-  MV.onRight = (x, y) => {
+  MV.onRight = (x, y, e) => {
     if (!G) return;
     const [wx, wy] = s2w(x, y); const hit = pickAt(wx, wy); if (!hit) return;
-    if (SEL.units.size) issueOrder(hit, null);
+    if (SEL.units.size) issueOrder(hit, null, e && e.shiftKey);
   };
   MV.onBox = (b, e) => {
     if (!G) return;
@@ -162,18 +168,7 @@ function wireMap() {
     if (g.o === G.player) s += `<div style="color:#8fa6bd;font-size:11px">Клик — выбрать, ПКМ по карте — приказ</div>`;
     showTip(s, x + 12, y + 12);
   };
-  MV.onKey = e => {
-    if (!G) return;
-    if (e.key === 'Escape') { if (UI.modal) closeModal(); else if (UI.mode) setMode(null); else clearSel(); }
-    else if (e.key === ' ') { e.preventDefault(); togglePause(); }
-    else if (/^[1-5]$/.test(e.key)) setSpeed(+e.key);
-    else if (e.key === 'h' || e.key === 'H') focusLoc(G.C[G.player].cap, 3);
-    else if (e.key === 'r' || e.key === 'R') { if (SEL.units.size) setMode('move'); }
-    else if (e.key === 'f' || e.key === 'F') { if (SEL.units.size) setMode('fire'); }
-    else if (e.key === 'b' || e.key === 'B') { if (SEL.units.size) setMode('strike'); }
-    else if (e.key === 'p' || e.key === 'P') { if (SEL.units.size) setMode('patrol'); }
-    else if (e.key === 'm' || e.key === 'M') openModal('overview');
-  };
+  MV.onKey = campaignKey;
   MV.onKeyDownGlobal = true;
 }
 function startMapClick(x, y) { const [wx, wy] = s2w(x, y); const hit = pickAt(wx, wy); if (hit && hit.k === 'p') { const ci = PROV[hit.id].c; if (window.startSelect) window.startSelect(ci); } }
@@ -193,7 +188,7 @@ function buildHUD() {
   $('tb-right').innerHTML = `<button class="ibtn" data-act="modal" data-m="events" data-tip="Сообщения" id="bellb">🔔<span class="badge hidden" id="bell"></span></button><button class="ibtn" data-act="modal" data-m="menu" data-tip="Меню">☰</button>`;
   $('mapmodes').innerHTML = MODES.slice(0, 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
   $('mini-wrap').style.display = 'block';
-  updateSpeedBtns(); updateModeBtns();
+  updateSpeedBtns(); updateModeBtns(); campaignToolbar();
 }
 const LEGENDS = {
   political: [['#5b8def', 'Цвет — государство'], ['rgba(255,255,255,.5)', 'Полосы — оккупированная провинция']],
@@ -230,7 +225,7 @@ function refreshHUD(force) {
   for (const n of G.news) {
     if (n.id <= UI.newsSeen) continue;
     UI.newsSeen = n.id;
-    
+
     if (n.f === 'p' || n.f === 'g') {
       latest = n;
       if (n.f === 'p' || n.t === 'war' || n.t === 'nuke') {
@@ -248,7 +243,7 @@ function refreshHUD(force) {
   { const done = G.goalsDone || []; const todo = GOALS.filter(g => !done.includes(g.id)).slice(0, 3);
     const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Рейтинг: ${rankOf(G.player)}-е место, ${fmt(scoreOf(G.player))} очков</div><div class="note">★ Победа: ${G.myVP || 0} / ${Math.ceil(G.totalVP * G.opts.win)} ПО (${Math.round((G.myVP || 0) / G.totalVP * 100)}% из ${Math.round(G.opts.win * 100)}%)</div>`;
     if (UI._goalsH !== html) { gp.innerHTML = html; UI._goalsH = html; } }
-  renderProvPanel(force); renderUnitPanel(force); updateTutorial();
+  renderProvPanel(force); renderUnitPanel(force); updateTutorial(); campaignRefresh();
   if (UI.modal && (!document.activeElement || !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) renderModal(true);
 }
 
@@ -304,7 +299,7 @@ function renderProvPanel(force) {
   if (!me && SEL.units.size && G.war[G.player * NC + pv.o]) {
     let mine = 0, theirs = 0; for (const id of SEL.units) { const uu = G.U.get(id); if (uu && UNITS[uu.t].dom === 'land') mine += unitPower(uu); }
     for (const uu of unitsAt(p)) if (UNITS[uu.t].dom === 'land' && G.war[G.player * NC + uu.o]) theirs += unitPower(uu) * TERRAIN[pr.terr].def * (1 + 0.12 * pv.b.fort);
-    h += `<div class="note" style="margin-top:6px">⚔ Ваша выбранная сила: <b>${Math.round(mine)}</b> · защита провинции: <b>${Math.round(theirs)}</b> ${theirs === 0 ? '— провинция не защищена, можно занимать' : mine > theirs * 1.3 ? '<span style="color:#5fd35f">— перевес, атакуйте</span>' : '<span style="color:#e0803c">— нужно больше войск (и держите их вместе)</span>'}</div>`;
+    h += !G.vis[p] && !G.fogOff ? '<div class="note">⚔ Состав защиты неизвестен: сначала разведайте провинцию.</div>' : `<div class="note" style="margin-top:6px">⚔ Ваша выбранная сила: <b>${Math.round(mine)}</b> · защита провинции: <b>${Math.round(theirs)}</b> ${theirs === 0 ? '— провинция не защищена, можно занимать' : mine > theirs * 1.3 ? '<span style="color:#5fd35f">— перевес, атакуйте</span>' : '<span style="color:#e0803c">— нужно больше войск (и держите их вместе)</span>'}</div>`;
   }
   if (G.bat.has(p) && G.hour - G.bat.get(p) <= 2) {
     const sides = {}; for (const u of unitsAt(p)) { const d = UNITS[u.t]; if (d.dom === 'msl' || (u.st === 'base' && d.dom === 'air')) continue; const s = sides[u.o] = sides[u.o] || { n: 0, hp: 0 }; s.n++; s.hp += u.hp; }
@@ -371,9 +366,10 @@ function renderProvPanel(force) {
     }
     if (!UNIT_ORDER.some(t => pv.b[UNITS[t].req[0]] > 0)) h += `<div class="note">Постройте Казармы, Завод, Аэродром или Базу ВМФ, чтобы производить войска.</div>`;
     if (pv.q.length >= 5) h += `<div class="note" style="margin-top:5px">Очередь заполнена (5/5) — дождитесь выпуска.</div>`;
-    if (pv.q.length) { h += `<div style="margin-top:6px">`; pv.q.forEach((it, i) => { h += `<div class="q">${unitIcon(it.t, '#fff', 18)}<span style="min-width:90px">${UNITS[it.t].n}</span><div class="bar"><i style="width:${Math.round((1 - it.left / it.total) * 100)}%"></i></div><span>${Math.ceil(it.left)}ч</span>${i === 0 ? `<button class="btn sm" data-act="speedup" data-k="q" data-p="${p}" data-tip="Ускорить за 💵${speedCost(p, 'q', 0)}">⏩</button>` : ''}<button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}">✕</button></div>`; }); h += `</div>`; }
+    if (pv.q.length) { h += `<div style="margin-top:6px">`; pv.q.forEach((it, i) => { h += `<div class="q">${unitIcon(it.t, '#fff', 18)}<span style="min-width:90px">${UNITS[it.t].n}</span><div class="bar"><i style="width:${Math.round((1 - it.left / it.total) * 100)}%"></i></div><span>${Math.ceil(it.left)}ч</span>${i === 0 ? `<button class="btn sm" data-act="speedup" data-k="q" data-p="${p}" data-tip="Ускорить за 💵${speedCost(p, 'q', 0)}">⏩</button>` : ''}<button class="btn sm" data-act="cx-queue" data-p="${p}" data-i="${i}" data-dir="-1" aria-label="Выше в очереди" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn sm" data-act="cx-queue" data-p="${p}" data-i="${i}" data-dir="1" aria-label="Ниже в очереди" ${i === pv.q.length - 1 ? 'disabled' : ''}>↓</button><button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}">✕</button></div>`; }); h += `</div>`; }
     h += `</div>`;
   }
+  h += provinceExtras(p);
   el.innerHTML = h; el.scrollTop = scrollTop;
 }
 function costHTMLplain(cost, m) { return Object.keys(cost).slice(0, 4).map(k => RES_INFO[RES_SHORT[k]].i + fmt(cost[k] * (m || 1))).join(' '); }
@@ -417,6 +413,7 @@ function renderUnitPanel(force) {
   if (hasLand && !hasTr) h += `<button class="btn" data-act="boardtr" data-tip="Погрузиться на транспорт в этой провинции">🚢 На борт</button>`;
   const upg = us.filter(u => canUpgrade(u)); if (upg.length) { const tot = {}; for (const u of upg) { const cc = upgradeCost(u); for (const k in cc) tot[k] = (tot[k] || 0) + cc[k]; } h += `<button class="btn" data-act="upgrade" data-tip="Модернизировать ${upg.length} юн. до текущего поколения<br>${costText(tot)}">⬆ Модернизация (${upg.length})</button>`; }
   h += `</div>`;
+  h += unitExtras(us);
   if (UI._up !== h) { el.innerHTML = h; UI._up = h; }
 }
 function stName(g) {
@@ -427,12 +424,14 @@ function stName(g) {
 /* ---- act dispatcher ---- */
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
-  if (!G && !['startgo', 'startselect', 'continue', 'opt', 'loadauto', 'loadstart'].includes(el.dataset.act)) return;
+  if (!G && !el.dataset.act.startsWith('cx-') && !['startgo', 'startselect', 'continue', 'opt', 'loadauto', 'loadstart', 'closemodal'].includes(el.dataset.act)) return;
   const d = el.dataset; Snd.play('click');
   act(d.act, d, el, e);
   if (el.tagName === 'BUTTON' && el.blur) el.blur();
 });
 function act(a, d, el, e) {
+  if (a.startsWith('cx-') && campaignAction(a, d, el, e)) return;
+  if (G?.opts.observer && ['build', 'queue', 'cancelbuild', 'cancelq', 'speedup', 'spy', 'cyber', 'upgrade', 'stop', 'recall', 'loadtr', 'boardtr', 'loadcar', 'unloadtr'].includes(a)) { toast('В режиме наблюдателя действует ИИ', 'war'); return; }
   switch (a) {
     case 'speed': { const v = +d.v; if (v === 0) { G.paused = true; } else { G.speed = v; G.paused = false; } updateSpeedBtns(); break; }
     case 'modal': openModal(d.m); break;

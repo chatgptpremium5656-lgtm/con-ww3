@@ -19,12 +19,14 @@ function declareWar(a, b, silent) {
   if (a === b || !G.C[a].alive || !G.C[b].alive) return 'invalid';
   if (G.war[a * NC + b]) return 'Уже идёт война';
   if (areAllied(a, b)) return 'Нельзя воевать с союзником';
+  if (!silent && pactBetween(a, b)) return 'Действует пакт о ненападении';
   if (!silent && G.truce && G.truce[a * NC + b] > G.hour) return 'Действует перемирие';
   setWar(a, b); if (!silent) bump(a, 'wars');
   if (!silent) news('war', `⚔ ${G.C[a].n} объявляет войну государству ${G.C[b].n}!`, G.C[b].cap, [a, b], 'g');
   addRel(a, b, -60);
   // third parties: defenders join
   const joined = [];
+  for (const g of G.campaign?.guarantees || []) if (g.b === b && g.a !== a && g.until > G.hour && G.C[g.a].alive && !areAllied(g.a, a) && !atWar(g.a, a)) { setWar(g.a, a); joined.push(g.a); }
   const defAl = G.C[b].alliance;
   if (defAl >= 0) for (const m of G.al[defAl].members) {
     if (m === b || m === a || !G.C[m].alive || G.war[m * NC + a] || areAllied(m, a)) continue;
@@ -46,8 +48,9 @@ function declareWar(a, b, silent) {
 }
 function previewWar(a, b) {
   const against = [], withUs = [];
+  for (const g of G.campaign?.guarantees || []) if (g.b === b && g.a !== a && g.until > G.hour && G.C[g.a].alive && !areAllied(g.a, a)) against.push(g.a);
   const defAl = G.C[b].alliance;
-  if (defAl >= 0) for (const m of G.al[defAl].members) { if (m === b || m === a || !G.C[m].alive || areAllied(m, a)) continue; if (relOf(m, a) > 55) continue; against.push(m); }
+  if (defAl >= 0) for (const m of G.al[defAl].members) { if (m === b || m === a || !G.C[m].alive || areAllied(m, a)) continue; if (relOf(m, a) > 55) continue; if (!against.includes(m)) against.push(m); }
   const atkAl = G.C[a].alliance;
   if (atkAl >= 0) for (const m of G.al[atkAl].members) { if (m === a || !G.C[m].alive || areAllied(m, b) || relOf(m, b) > 5) continue; withUs.push(m); }
   return { against, withUs };
@@ -86,7 +89,7 @@ function aiPeaceEval(b, a) { // b = AI deciding, a = proposer
   const ratio = pb / pa;
   const lost = G.wlost[b * NC + a], took = G.wlost[a * NC + b];
   const initial = CTY[b].provs.length;
-  let score = 0;
+  let score = personality(B).peace;
   score += (1 - ratio) * 1.5;
   score += (lost - took) * 0.5;
   score += days > 30 ? 0.7 : days / 45;
@@ -110,8 +113,10 @@ function createAlliance(c, name) {
   const al = { id: G.al.length, n: name || ('Союз ' + C.n), color: C.color, members: [c], leader: c, bloc: '' };
   G.al.push(al); C.alliance = al.id; return '';
 }
-function leaveAlliance(c) {
+function leaveAlliance(c, immediate) {
   const C = G.C[c]; if (C.alliance < 0) return;
+  if (!immediate && c === G.player && G.campaign) { if (!C.leaveAt) C.leaveAt = G.hour + 72; return; }
+  C.leaveAt = 0;
   const al = G.al[C.alliance];
   for (const m of al.members) if (m !== c) { G.acc[c * NC + m] = 0; G.acc[m * NC + c] = 0; addRel(c, m, -15); }
   al.members = al.members.filter(m => m !== c); C.alliance = -1;
@@ -120,7 +125,7 @@ function leaveAlliance(c) {
 }
 function joinAlliance(c, id) {
   const C = G.C[c], al = G.al[id];
-  if (C.alliance >= 0) leaveAlliance(c);
+  if (C.alliance >= 0) leaveAlliance(c, true);
   for (const m of al.members) { G.acc[c * NC + m] = G.acc[m * NC + c] = 1; }
   al.members.push(c); C.alliance = id;
   // inherit wars of the alliance leader
@@ -148,6 +153,7 @@ function requestAccess(from, to) { // `from` asks `to` for military access
   return { ok: false, why: 'Отказано. Нужны отношения от +20 (сейчас ' + Math.round(relOf(from, to)) + ')' };
 }
 function giveGift(a, b, res, qty) {
+  if (embargoed(a, b)) return false;
   const A = G.C[a]; if (!(qty > 0) || !isFinite(qty) || A.res[res] < qty) return false;
   A.res[res] -= qty; G.C[b].res[res] += qty;
   const base = { cash: 1, food: 1, supp: 1.6, fuel: 2, comp: 2.2, elec: 4, rare: 6, man: 8 }[res] || 1;
@@ -160,6 +166,7 @@ const BASE_PRICE = { food: 1, supp: 1.6, fuel: 2, comp: 2.2, elec: 4, rare: 6 };
 function priceOf(res, buy) { return BASE_PRICE[res] * G.market.m[res] * (buy ? 1.12 : 0.88); }
 function trade(c, res, qty, buy) {
   const C = G.C[c];
+  if (!Object.hasOwn(BASE_PRICE, res)) return 'Неизвестный ресурс';
   if (!(qty > 0) || !isFinite(qty)) return 'Количество?';
   if (buy) {
     const cost = priceOf(res, true) * qty;
@@ -178,9 +185,9 @@ function unsparse(s, T) { const a = new T(NC * NC); for (let i = 0; i < s.length
 function saveGame() {
   const g = G;
   const o = {
-    v: 1, opts: g.opts, seed: g.seed, rng: g.rng.get(), hour: g.hour, speed: g.speed, player: g.player, tension: g.tension, nextU: g.nextU, market: g.market, stats: g.stats, over: g.over,
-    C: g.C.map(c => ({ alive: c.alive, cap: c.cap, res: c.res, techs: c.techs, gen: c.gen, rs: c.rs, alliance: c.alliance, foodScale: c.foodScale, stats: c.stats, provs: c.provs, doc: c.doc, ai: c.ai, ai_s: c.ai_s, pwr: c.pwr })),
-    pv: g.pv.map(p => ({ o: p.o, b: p.b, bq: p.bq, q: p.q, dmg: p.dmg, cap: p.cap, fall: p.fall, since: p.since, pop: p.pop, cyber: p.cyber || 0 })),
+    v: SAVE_VERSION, world: WORLD_ID, gameVersion: GAME_VERSION, campaign: g.campaign, autoBuy: g.autoBuy, autoDef: g.autoDef, fogOff: g.fogOff, opts: g.opts, seed: g.seed, rng: g.rng.get(), hour: g.hour, speed: g.speed, player: g.player, tension: g.tension, nextU: g.nextU, market: g.market, stats: g.stats, over: g.over,
+    C: g.C.map(c => ({ alive: c.alive, cap: c.cap, res: c.res, techs: c.techs, gen: c.gen, rs: c.rs, alliance: c.alliance, foodScale: c.foodScale, stats: c.stats, provs: c.provs, doc: c.doc, ai: c.ai, ai_s: c.ai_s, pwr: c.pwr, vp: c.vp, inc: c.inc, use: c.use, manCap: c.manCap, foodNeed: c.foodNeed, dirty: c.dirty, cyberCd: c.cyberCd, tax: c.tax, inflation: c.inflation, reserveFuel: c.reserveFuel, reputation: c.reputation, personality: c.personality, lossTypes: c.lossTypes, printUntil: c.printUntil, aidUntil: c.aidUntil, leaveAt: c.leaveAt })),
+    pv: g.pv.map(p => ({ o: p.o, b: p.b, bq: p.bq, q: p.q, dmg: p.dmg, cap: p.cap, fall: p.fall, since: p.since, pop: p.pop, cyber: p.cyber || 0, corrupt: p.corrupt || 0, loyalty: p.loyalty, cashBase: p.cashBase })),
     U: Array.from(g.U.values()),
     rel: sparse(g.rel), war: sparse(g.war), acc: sparse(g.acc), warStart: sparse(g.warStart), wlost: sparse(g.wlost), truce: g.truce ? sparse(g.truce) : null,
     al: g.al, goals: g.goalsDone || [], spies: g.spies, spyId: g.spyId, intel: g.intel, news: g.news.slice(-80)
@@ -188,18 +195,21 @@ function saveGame() {
   return JSON.stringify(o);
 }
 function loadGame(str) {
-  const o = JSON.parse(str);
+  const o = JSON.parse(str, (key, value) => { if (['__proto__', 'constructor', 'prototype'].includes(key)) throw new Error('Недопустимое поле сохранения'); return value; });
+  validateSave(o);
   newGameShell(o.opts);
   G.seed = o.seed; G.rng.set(o.rng); G.hour = o.hour; G.speed = 0; G.paused = true; G.player = o.player; G.tension = o.tension; G.nextU = o.nextU; G.market = o.market; G.stats = o.stats; G.over = o.over;
   o.C.forEach((c, i) => Object.assign(G.C[i], c));
-  G.C.forEach((c, i) => { c.ai = i !== G.player; });
+  G.C.forEach((c, i) => { c.ai = o.opts.observer ? true : (o.C[i].ai ?? i !== G.player); });
   o.pv.forEach((p, i) => Object.assign(G.pv[i], p));
   for (const id of G.at) id.length = 0;
   G.U = new Map();
   for (const u of o.U) { G.U.set(u.id, u); if (u.st !== 'cargo' && u.st !== 'out' && u.st !== 'back') G.at[u.loc].push(u.id); }
   G.rel = unsparse(o.rel, Int8Array); G.war = unsparse(o.war, Uint8Array); G.acc = unsparse(o.acc, Uint8Array); G.warStart = unsparse(o.warStart, Int32Array); G.wlost = unsparse(o.wlost, Int16Array); G.truce = o.truce ? unsparse(o.truce, Int32Array) : new Int32Array(NC * NC);
   G.al = o.al; G.goalsDone = o.goals || []; G.spies = o.spies || []; G.spyId = o.spyId || 0; G.intel = o.intel || {}; G.news = o.news; G.newsId = o.news.length ? o.news[o.news.length - 1].id || 0 : 0;
-  for (const c of G.C) { c.dirty = true; if (c.alive) { recalc(c); calcUse(c); } }
+  G.autoBuy = o.autoBuy; G.autoDef = o.autoDef; G.fogOff = o.fogOff;
+  initCampaign(o.campaign);
+  for (const c of G.C) if (c.alive && (o.v === 1 || !c.inc || !c.use)) { c.dirty = true; recalc(c); calcUse(c); }
   G.totalVP = PROV.reduce((a, p) => a + p.vp, 0);
   updateVis(true);
   return G;

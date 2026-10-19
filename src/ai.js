@@ -21,6 +21,7 @@ function aiBuildPlan(C, p, ctx) {
   const border = ctx.border.has(p);
   const rsum = pr.res[0] + pr.res[1] + pr.res[2] + pr.res[3] + pr.res[4] + pr.res[5];
   const plan = [];
+  if (G.campaign && !G.supply?.[C.id]?.[p]) plan.push(['depot', 1]);
   plan.push(['infra', isCap ? 4 : big ? 3 : 2]);
   if (rsum >= 5) plan.push(['eco', rsum >= 10 ? 3 : 2]);
   if (big || isCap) plan.push(['barracks', 1 + (C.mil >= 5 ? 1 : 0) + (war ? 1 : 0) + (isCap ? 1 : 0)]);
@@ -119,6 +120,7 @@ function aiResearch(C) {
 
 /* ---------- diplomacy ---------- */
 function aiDiplomacy(C) {
+  if (G.opts.scenario === 'sandbox') return;
   const diff = DIFF[G.opts.diff];
   // seek peace in AI-vs-AI wars
   for (const e of warsOf(C.id)) {
@@ -130,7 +132,7 @@ function aiDiplomacy(C) {
   if (wars.length >= (C.agg >= 4 ? 3 : C.agg >= 2 ? 2 : 1)) return;
   const myPow = alliancePower(C.id);
   if (myPow < 1) return;
-  const chance = 0.011 * C.agg * G.tension * diff.aiAgg * (1 + (C.mil >= 7 ? 0.3 : 0));
+  const chance = 0.011 * personality(C).aggression * (G.opts.aiAggression || 1) * C.agg * G.tension * diff.aiAgg * (1 + (C.mil >= 7 ? 0.3 : 0));
   if (R() > chance) return;
   let totalWars = 0; for (let a = 0; a < NC; a++) for (let b = a + 1; b < NC; b++) if (G.war[a * NC + b]) totalWars++;
   if (totalWars > 10 + G.hour / 24 / 6) return;
@@ -138,7 +140,7 @@ function aiDiplomacy(C) {
   let best = -1, bs = 0;
   for (const o of G.C) {
     if (!o.alive || o.id === C.id || areAllied(C.id, o.id) || G.war[C.id * NC + o.id]) continue;
-    if (G.truce[C.id * NC + o.id] > G.hour) continue;
+    if (G.truce[C.id * NC + o.id] > G.hour || pactBetween(C.id, o.id)) continue;
     const rival = C.rivals.indexOf(o.key) >= 0 || o.rivals.indexOf(C.key) >= 0;
     const rel = relOf(C.id, o.id);
     let sc = -rel * 0.8 + (rival ? 45 : 0) + (nb.has(o.id) ? 12 : 0);
@@ -165,7 +167,7 @@ function aiMilitary(C) {
   const enemies = warsOf(C.id);
   if (!enemies.length) { C.ai_s.front = null; return; }
   const my = unitsOf(C.id);
-  const land = my.filter(u => UNITS[u.t].dom === 'land' && u.st === 'idle');
+  const land = my.filter(u => UNITS[u.t].dom === 'land' && u.st === 'idle' && !u.repair);
   const grace = G.hour < 24 * (G.opts.diff === 'easy' ? 14 : 8);
   const pace = DIFF[G.opts.diff].pace || 1;
   const vsPlayer = enemies.includes(G.player);
@@ -180,6 +182,8 @@ function aiMilitary(C) {
 function aiLand(C, enemies, land, my, grace) {
   if (!land.length) return;
   const S = C.ai_s;
+  for (const u of land) if (u.hp < 35 && u.loc < P && G.pv[u.loc].o === C.id) { u.repair = true; u.hold = true; }
+  land = land.filter(u => !u.repair);
   // defend against invaders
   const threats = [];
   for (const p of C.provs) { let t = 0; for (const id of G.at[p]) { const u = G.U.get(id); if (u && G.war[C.id * NC + u.o] && UNITS[u.t].dom === 'land' && u.st !== 'cargo') t += unitPower(u); } if (t > 0) threats.push([p, t]); }
@@ -192,6 +196,8 @@ function aiLand(C, enemies, land, my, grace) {
     for (const u of near) { const r = orderMove([u.id], tp); if (r.n) used.add(u.id); }
   }
   if (grace) return;
+  const objective = G.campaign?.objectives.find(o => o.owner !== C.id && areAllied(o.owner, C.id) && o.until > G.hour && atWar(C.id, G.pv[o.loc].o));
+  if (objective) { const stage = PROV[objective.loc].adj.find(p => isFriendlyProv(C.id, p)); if (stage !== undefined) S.front = { t: objective.loc, s: stage, h: G.hour }; }
   // frontier target selection
   const enemySet = new Set(enemies);
   let target = S.front && G.pv[S.front.t].o !== C.id && enemySet.has(G.pv[S.front.t].o) ? S.front : null;
@@ -219,11 +225,13 @@ function aiLand(C, enemies, land, my, grace) {
     let bs = -1; for (const a of PROV[T].adj) if (isFriendlyProv(C.id, a)) { let n = G.at[a].length; if (n > bs) { bs = n; stage = a; } }
     target.s = stage;
   }
-  const reserve = Math.max(1, Math.floor(land.length * 0.12));
+  const reserve = Math.max(2, Math.floor(land.length * 0.18));
   let atStage = [], idleOthers = [];
   const cand = land.filter(u => !used.has(u.id)).sort((a, b) => dist(a.loc, C.cap) - dist(b.loc, C.cap));
   const keep = cand.slice(0, reserve);
+  for (const u of keep) if (u.loc !== C.cap && !used.has(u.id)) orderMove([u.id], C.cap);
   for (const u of cand.slice(reserve)) {
+    if (u.hp < 40 || !supplied(u)) continue;
     if (u.loc === stage) atStage.push(u);
     else if (u.loc === T) { /* fighting or just captured */ }
     else idleOthers.push(u);
@@ -231,7 +239,7 @@ function aiLand(C, enemies, land, my, grace) {
   for (const u of idleOthers) { if (dist(u.loc, stage) < 520) orderMove([u.id], stage); }
   const defP = enemyPowerAt(C.id, T, 'land') * TERRAIN[PROV[T].terr].def * (1 + 0.12 * G.pv[T].b.fort);
   let myP = 0; for (const u of atStage) myP += unitPower(u);
-  const attackNow = atStage.length >= 3 && (myP > defP * 1.0 || (G.hour - target.h > 24 * 3 && myP > defP * 0.6)) || (atStage.length >= 1 && defP === 0);
+  const attackNow = atStage.length >= 3 && (myP > defP * personality(C).threshold || (G.hour - target.h > 24 * 3 && myP > defP * 0.9)) || (atStage.length >= 1 && defP === 0);
   if (attackNow) { orderMove(atStage.map(u => u.id), T); target.h = G.hour; }
 }
 function aiAmphibious(C, enemies, land, my) {

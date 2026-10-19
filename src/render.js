@@ -105,6 +105,9 @@ function ownerOf(p) { return G ? G.pv[p].o : PROV[p].c; }
 function provFill(p) {
   const o = ownerOf(p);
   const mode = MV.mode;
+  if (G && mode === 'supply') return o !== G.player ? '#4a5360' : G.supply?.[G.player]?.[p] ? '#35a87c' : '#d78836';
+  if (G && mode === 'loyalty') { const c = mix([168, 68, 57], [53, 168, 124], G.pv[p].loyalty / 100); return rgb2css(...c); }
+  if (G && mode === 'fallout') { const c = mix([37, 52, 68], [220, 224, 50], G.pv[p].fall); return rgb2css(...c); }
   if (mode === 'terrain') { const c = TERRAIN[PROV[p].terr].col; return rgb2css(c[0], c[1], c[2]); }
   if (mode === 'political' || !G) {
     const col = rgbOf(G ? G.C[o].color : CCOLORS[o]);
@@ -135,7 +138,7 @@ function provFill(p) {
 
 function resize() {
   const cv = MV.cv; const r = cv.parentElement.getBoundingClientRect();
-  MV.W = Math.max(300, r.width); MV.H = Math.max(300, r.height); MV.dpr = Math.min(2, window.devicePixelRatio || 1);
+  MV.W = Math.max(300, r.width); MV.H = Math.max(300, r.height); MV.dpr = Math.min(PREF.lowPower ? 1 : 2, window.devicePixelRatio || 1);
   cv.width = MV.W * MV.dpr; cv.height = MV.H * MV.dpr; cv.style.width = MV.W + 'px'; cv.style.height = MV.H + 'px';
   clampCam(); MV.dirty = true;
 }
@@ -325,9 +328,9 @@ function drawOverlay() {
   }
   // routes for selected units
   const SELU = window.SEL ? SEL.units : null;
-  if (SELU && SELU.size) {
+  if (SELU && (SELU.size || PREF.routes)) {
     ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
-    for (const id of SELU) {
+    for (const id of (PREF.routes ? unitsOf(G.player).map(u => u.id) : SELU)) {
       const u = G.U.get(id); if (!u) continue;
       const pos = unitPos(u);
       let pts = [];
@@ -408,7 +411,15 @@ function drawOverlay() {
 
 /* ---------- picking ---------- */
 let pickCtx = null;
-function pickAt(wx, wy) {
+function pickAt(wx, wy, touchRadius) {
+  if (touchRadius) {
+    let nearest = -1, distance = touchRadius;
+    for (const p of PROV) {
+      if (Math.max(p.bbox[2]-p.bbox[0],p.bbox[3]-p.bbox[1]) > touchRadius * 2) continue;
+      const d = Math.hypot(p.x-wx,p.y-wy); if (d < distance) { distance=d; nearest=p.id; }
+    }
+    if (nearest >= 0) return { k:'p', id:nearest };
+  }
   if (!pickCtx) pickCtx = document.createElement('canvas').getContext('2d');
   for (let i = 0; i < P; i++) { const b = PROV[i].bbox; if (wx < b[0] || wx > b[2] || wy < b[1] || wy > b[3]) continue; if (pickCtx.isPointInPath(PPATH[i], wx, wy, 'evenodd')) return { k: 'p', id: i }; }
   for (let i = 0; i < S; i++) { const b = SEA[i].bbox; if (wx < b[0] || wx > b[2] || wy < b[1] || wy > b[3]) continue; if (pickCtx.isPointInPath(SPATH[i], wx, wy, 'evenodd')) return { k: 's', id: i }; }
@@ -430,6 +441,7 @@ function drawMini() {
   }
   MV.mctx.setTransform(1, 0, 0, 1, 0, 0);
   m.putImageData(MV.miniBase, 0, 0);
+  if (G) { m.fillStyle = '#ff785e'; for (const [loc, hour] of G.bat) if (G.hour - hour < 3 && (G.fogOff || G.vis[loc])) { m.beginPath(); m.arc(lx(loc) / WW * mw, ly(loc) / WH * mh, 3, 0, 7); m.fill(); } }
   const z = MV.cam.z, x0 = (MV.cam.cx - MV.W / 2 / z) / WW * mw, y0 = (MV.cam.cy - MV.H / 2 / z) / WH * mh, w = MV.W / z / WW * mw, h = MV.H / z / WH * mh;
   m.strokeStyle = '#fff'; m.lineWidth = 1.5; m.strokeRect(x0, y0, w, h);
 }
@@ -502,14 +514,16 @@ function initMap(cv, mini) {
     MV.mx = x; MV.my = y;
   }
   function frame(t) {
+    if (PREF.lowPower && t - (MV.lastFrame || 0) < 33) { requestAnimationFrame(frame); return; }
+    MV.lastFrame = t;
     MV.now = t;
     const animate = (G && !G.paused) || MV.fxs.length || MV.dirty || (G && G.fx.length);
     if (animate || t - (MV.lastDraw || 0) > 400) {
       MV.lastDraw = t; MV.dirty = false;
-      const bk = [MV.cam.cx.toFixed(2), MV.cam.cy.toFixed(2), MV.cam.z.toFixed(3), MV.W, MV.H, MV.mode, G ? G.ownVer + '|' + (/^(rel|pow|blo)/.test(MV.mode) ? (G.hour / 8 | 0) : 0) : 'x'].join('|');
+      const bk = [MV.cam.cx.toFixed(2), MV.cam.cy.toFixed(2), MV.cam.z.toFixed(3), MV.W, MV.H, MV.mode, G && ['supply', 'loyalty', 'fallout'].includes(MV.mode) ? Math.floor(G.hour / 6) : 0, G ? G.ownVer + '|' + (/^(rel|pow|blo)/.test(MV.mode) ? (G.hour / 8 | 0) : 0) : 'x'].join('|');
       if (bk !== MV.baseKey || !MV.bcv || MV.bcv.width !== MV.cv.width) { if (!MV.bcv) { MV.bcv = document.createElement('canvas'); MV.bctx = MV.bcv.getContext('2d'); } if (MV.bcv.width !== MV.cv.width || MV.bcv.height !== MV.cv.height) { MV.bcv.width = MV.cv.width; MV.bcv.height = MV.cv.height; } drawBase(); MV.baseKey = bk; }
       MV.ctx.setTransform(1, 0, 0, 1, 0, 0); MV.ctx.drawImage(MV.bcv, 0, 0);
-      drawHL(); drawOverlay();
+      drawHL(); drawOverlay(); drawCampaignOverlay();
       if (miniDirty || t - miniTimer > 250) { miniTimer = t; drawMini(); }
     }
     requestAnimationFrame(frame);

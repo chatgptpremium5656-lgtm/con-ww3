@@ -1,0 +1,2 @@
+# Only for optional browser tests; the game itself has no dependencies.
+playwright==1.62.0

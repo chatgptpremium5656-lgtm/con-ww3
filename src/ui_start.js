@@ -35,6 +35,7 @@ function showStart() {
     <div class="opt">${[['auto', 'Авто'], ...Object.entries(DOCS).map(([k, v]) => [k, v.n])].map(([k, n]) => `<button class="btn ${UI.start.doc === k ? 'on' : ''}" data-act="opt" data-g="doc" data-v="${k}" data-tip="${k === 'auto' ? 'По блоку страны' : DOCS[k].d}">${n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Победа: <span id="winv">${UI.start.win}</span>% победных очков</h3>
     <input type="range" min="25" max="80" value="${UI.start.win}" oninput="UI.start.win=+this.value;$('winv').textContent=this.value">
+    <details class="cx-start-options"><summary>Настройки партии и наблюдатель</summary><div class="cx-fields"><label>Seed мира <input id="cx-seed" type="number" min="1" max="2147483647" placeholder="Случайный"></label><label>Начальные запасы <select id="cx-stock"><option value="1">Обычные</option><option value="2">Двойные</option><option value="0.5">Половина</option></select></label><label>Агрессия ИИ <select id="cx-aggression"><option value="1">Обычная</option><option value="0.5">Низкая</option><option value="1.5">Повышенная</option></select></label><label><input id="cx-supply" type="checkbox" checked> Снабжение</label><label><input id="cx-observer" type="checkbox"> Наблюдать за ИИ</label></div></details><div class="row">${cxButton('import', '📂 Импорт сохранения')}${cxButton('settings', '⚙ Настройки')}</div><small>v${GAME_VERSION}</small>
     <button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
     ${hasAuto ? '<button class="btn" data-act="loadauto">📂 Продолжить с автосохранения</button>' : ''}${[1, 2, 3].map(n => { const mi = slotInfo(n); return mi ? `<button class="btn" data-act="loadstart" data-n="${n}">📂 Слот ${n}: ${esc(mi.t)}</button>` : ''; }).join('')}
     <div class="note">Управление: ЛКМ — выбор, ПКМ — приказ, колесо — масштаб, Пробел — пауза. На телефоне: щипок, долгое нажатие — приказ.</div>
@@ -76,9 +77,10 @@ const _act = act; act = function (a, d, el, e) { if (['opt', 'startselect', 'sta
 
 function startNew() {
   const o = UI.start;
+  const extra = { seed: +$('cx-seed').value || undefined, stock: +$('cx-stock').value, aiAggression: +$('cx-aggression').value, supply: $('cx-supply').checked, observer: $('cx-observer').checked };
   $('gobtn').disabled = true; $('gobtn').textContent = 'Загрузка мира…';
   setTimeout(() => {
-    newGame({ player: o.c, scenario: o.scenario, diff: o.diff, win: o.win / 100, doc: o.doc === 'auto' ? undefined : o.doc });
+    newGame({ ...extra, player: o.c, scenario: o.scenario, diff: o.diff, win: o.win / 100, doc: o.doc === 'auto' ? undefined : o.doc });
     afterNew();
   }, 30);
 }
@@ -86,19 +88,20 @@ function afterNew() {
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('mini-wrap').style.display = 'block';
   SEL.units.clear(); SEL.prov = SEL.sea = -1; MV.sel = SEL; MV.startHi = -1; MV.mode = 'political'; miniDirty = true;
   UI.newsSeen = G.news.length ? G.news[G.news.length - 1].id : 0; UI.unseen = 0; UI._up = ''; UI.dc = -1;
-  G.paused = true; G.speed = 1; G.fogOff = !UI.fog; lastAutoHour = G.hour; overShown = false;
+  G.paused = true; G.speed = 1; G.fogOff = G.opts.observer || !UI.fog; lastAutoHour = G.hour; overShown = false;
   buildHUD(); closeModalSilently();
   const c = G.C[G.player]; focusLoc(c.cap, 3.4); selectProv(c.cap);
   refreshHUD(true);
   UI.tut = UI.tutOff ? -1 : 0;
-  openModal('tutorial');
+  campaignToolbar();
+  if (G.opts.observer) { UI.tut = -1; UI.autoPause = false; } else openModal('tutorial');
 }
 function closeModalSilently() { UI.modal = null; $('modal-back').classList.add('hidden'); }
 function afterLoad() {
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('mini-wrap').style.display = 'block';
   SEL.units.clear(); SEL.prov = SEL.sea = -1; MV.sel = SEL; MV.startHi = -1; miniDirty = true;
   UI.newsSeen = G.news.length ? G.news[G.news.length - 1].id : 0; UI.unseen = 0; UI._up = '';
-  G.paused = true; G.speed = 1; G.fogOff = !UI.fog; lastAutoHour = G.hour; overShown = false;
+  G.paused = true; G.speed = 1; G.fogOff = G.opts.observer || !UI.fog; lastAutoHour = G.hour; overShown = false;
   buildHUD(); closeModalSilently();
   focusLoc(G.C[G.player].cap, 3.2); refreshHUD(true); toast('Игра загружена', 'good');
 }
@@ -124,7 +127,7 @@ function loop(t) {
   }
   if (t - UI.last > 260) { UI.last = t; refreshHUD(); }
   if (G.over && !overShown) showOver();
-  if (G.hour - lastAutoHour >= 24 * 8 && !G.paused) { lastAutoHour = G.hour; try { localStorage.setItem('conww3_auto', saveGame()); } catch (e) { if (!UI.autoWarn) { UI.autoWarn = 1; toast('Автосохранение не удалось: хранилище браузера заполнено. Удалите старые слоты в меню.', 'war'); } } }
+  if (G.hour - lastAutoHour >= 24 && !G.paused) { lastAutoHour = G.hour; try { localStorage.setItem('conww3_auto', saveGame()); } catch (e) { if (!UI.autoWarn) { UI.autoWarn = 1; toast('Автосохранение не удалось: хранилище браузера заполнено. Удалите старые слоты в меню.', 'war'); } } }
 }
 
 window.addEventListener('load', () => {
