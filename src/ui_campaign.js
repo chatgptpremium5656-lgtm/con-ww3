@@ -32,6 +32,7 @@ function cxButton(action, label, attrs) { return `<button class="btn" data-act="
 function campaignToolbar() {
   let bar = $('campaign-bar');
   if (!bar) { bar = document.createElement('div'); bar.id = 'campaign-bar'; $('hud').appendChild(bar); }
+  if (G?.opts.casual) { bar.innerHTML = cxButton('search', '🔎 Найти город') + `<span class="cx-version">Быстрая игра · v${GAME_VERSION}</span>`; return; }
   bar.innerHTML = `${cxButton('advisor', '💡 Что делать дальше?')}${cxButton('search', '🔎 Поиск')}${cxButton('settings', '⚙ Настройки')}<span class="cx-version">v${GAME_VERSION}${G?.opts.observer ? ' · НАБЛЮДАТЕЛЬ' : ''}</span>`;
 }
 function adviceItems() {
@@ -90,6 +91,7 @@ function treatiesHTML() {
   return h;
 }
 function extraDiplomacyHTML(c) {
+  if (G.opts.casual) return '';
   const me = G.player, war = atWar(me, c.id), pact = pactBetween(me, c.id);
   let h = `<section class="cx-card"><h3>Переговоры и договоры</h3><p>Лидер: ${personality(c).n} · репутация ${Math.round(c.reputation)}/100</p><div class="row">`;
   if (war) {
@@ -156,6 +158,7 @@ function guideHTML() {
 function guideResults(q) { return GUIDE.filter(([n, d]) => (n + ' ' + d).toLocaleLowerCase('ru').includes(q)).map(([n, d]) => `<details class="cx-definition" ${q ? 'open' : ''}><summary>${esc(n)}</summary><p>${esc(d)}</p></details>`).join('') || '<p>Ничего не найдено.</p>'; }
 function renderGuideResults() { const el = $('cx-guide-results'); if (el) el.innerHTML = guideResults((UI.guideQuery || '').toLocaleLowerCase('ru')); }
 function preferencesHTML() {
+  if (G?.opts.casual) return quickPreferencesHTML();
   const checks = [['simple', 'Простой интерфейс'], ['contrast', 'Контрастная палитра и контуры'], ['reduced', 'Уменьшить анимацию'], ['lowPower', 'Экономить ресурсы устройства'], ['routes', 'Все мои маршруты'], ['fronts', 'Подсветка фронтов'], ['ranges', 'Радиусы выбранной авиации и ракет'], ['weather', 'Значки погоды'], ['waves', 'Волны на море'], ['clouds', 'Облака в непогоду'], ['roads', 'Линии инфраструктуры'], ['lights', 'Огни городов ночью'], ['effects', 'Дым и последствия боёв'], ['music', 'Тихая процедурная музыка']];
   return `<div class="cx-fields"><label>Оформление <select data-cx-pref="theme">${[['dark', 'Тёмное'], ['light', 'Светлое'], ['military', 'Военное']].map(([k, n]) => `<option value="${k}" ${PREF.theme === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label><label>Размер текста <input type="number" data-cx-pref="font" min="12" max="20" value="${PREF.font}"></label><label>Громкость <input type="range" data-cx-pref="volume" min="0" max="1" step="0.05" value="${PREF.volume}"></label>${checks.map(([k, n]) => `<label><input type="checkbox" data-cx-pref="${k}" ${PREF[k] ? 'checked' : ''}> ${n}</label>`).join('')}</div><p class="note">Экономичный режим ограничивает отрисовку 30 кадрами/с и плотность пикселей. Настройки сохраняются в этом браузере. Музыка включается после первого нажатия и не скачивает файлы.</p><h3>Горячие клавиши</h3><div class="cx-fields">${Object.entries(KEY_NAMES).map(([k, n]) => `<label>${n}<input type="text" maxlength="1" data-cx-key="${k}" value="${PREF.keys[k] === 'Space' ? ' ' : PREF.keys[k] === 'Slash' ? '/' : PREF.keys[k].replace('Key', '')}" aria-label="${n}"></label>`).join('')}</div>${cxButton('reset-keys', 'Сбросить клавиши')}<p class="note">Клавиши 1–5: скорость; стрелки/WASD: карта; +/−: масштаб; Esc: закрыть. Они зарезервированы. Используется физическая клавиша, поэтому русская раскладка поддерживается.</p><h3>Перенос сохранений</h3><div class="row">${G ? cxButton('export', '💾 Скачать сохранение') : ''}${cxButton('import', '📂 Открыть файл сохранения')}</div><p class="note">Облачная синхронизация не подключена. Храните скачанный файл для переноса между устройствами.</p>`;
 }
@@ -173,6 +176,7 @@ const CHANGELOG = [
 ];
 function commandHTML(tab) {
   if (!G) return preferencesHTML();
+  if (G.opts.casual) { if (tab === 'settings') return quickPreferencesHTML(); if (tab === 'guide') return quickGuideHTML(); if (tab === 'changes') return '<h3>Версия 0.4.0</h3><p>Меньше меню, три ресурса, быстрое производство и движение. Ракетное оружие удалено у всех стран.</p>'; return quickOverviewHTML(); }
   const renderers = { advisor: advisorHTML, budget: budgetHTML, forces: forcesHTML, treaties: treatiesHTML, reports: reportsHTML, decisions: decisionsHTML, history: journalHTML, achievements: achievementsHTML, guide: guideHTML, settings: preferencesHTML, changes: () => `<h3>Версия ${GAME_VERSION}</h3><ul>${CHANGELOG.map(t => `<li>${t}</li>`).join('')}</ul><p class="note">Онлайн-мультиплеер, облачные сохранения и общая таблица рекордов требуют сервера и здесь пока не доступны.</p>` };
   return (renderers[tab] || advisorHTML)();
 }
@@ -326,6 +330,8 @@ document.addEventListener('change', e => {
 });
 function campaignRefresh() {
   if (!G?.campaign) return;
+  document.body.classList.toggle('quick-game', !!G.opts.casual);
+  if (G.opts.casual) return;
   if (G.opts.observer) { G.fogOff = true; UI.autoPause = false; }
   const C = G.C[G.player], chips = document.querySelectorAll('#tb-res .rchip');
   for (const [i, k] of [...RES, 'man'].entries()) {
@@ -348,7 +354,7 @@ function unitExtras(us) {
 }
 /* Draw only information available to the player, and cap decorative work on phones. */
 function drawCampaignOverlay() {
-  if (!G?.campaign) return;
+  if (!G?.campaign || G.opts.casual) return;
   const ctx = MV.ctx, z = MV.cam.z;
   ctx.save(); ctx.setTransform(MV.dpr, 0, 0, MV.dpr, 0, 0); ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
   const visible = p => G.fogOff || G.vis[p];

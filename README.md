@@ -3,15 +3,35 @@
 Single-file browser grand-strategy game, written from scratch, inspired by *Conflict of Nations: World War 3*.
 Open **`index.html`** in any modern browser (no server, no dependencies). Everything — map, engine, AI and UI — is inside that one file.
 
+## Quick play — version 0.4.0
+
+New games now start in the simpler mode: three visible resources (money, materials,
+manpower), three sidebar sections, a short menu, and compact recruitment panels.
+Food, fuel and supply are managed automatically; fatigue, weather penalties,
+taxation and civilian decisions are removed from the default game loop.
+Units cost less and take about 40% of the previous recruitment time; construction
+takes half the time, movement is 60% faster, and manpower recovers three times faster.
+Income and materials production are boosted by 50%. Armies upgrade automatically
+each week. The default victory target is 25% of world points with your alliance.
+
+Cruise, ballistic and nuclear missiles are disabled for **all** countries in both
+modes. Old saves are migrated: missiles on bases and in flight are removed, queued
+missiles are refunded, and silos become income buildings. Missile research and launch
+controls are unavailable. Definitions remain in the loader solely for compatibility.
+
+The optional advanced mode is under additional settings on the start screen. The
+0.3.0 campaign systems described below apply to that mode; they are not presented as
+extra management chores in quick play. Existing saves remain loadable.
+
 ## Features
 * Real-time world map (Natural Earth based): 197 countries, 755 provinces around real cities, 98 sea zones, terrain, victory points.
 * Economy: 7 resources + manpower, daily production, upkeep, shortages, world market.
-* Provinces with 10 building types; production queues for 22 unit types (land / air / sea / missiles / nukes) in 4 tech generations.
-* Research tree (unit generations + national techs), 5 parallel branches.
+* Provinces with 10 building types; production queues for conventional land, air and naval units in 4 tech generations.
+* Optional advanced research (unit generations + national techs), 5 parallel branches.
 * Real-time combat with terrain, armour, morale, retreats, AA fire, bombing, submarines (stealth), carriers, transports & amphibious landings.
 * Province capture, occupation, capitals, country elimination, victory points & alliance victory.
 * Diplomacy: war / peace, alliances (NATO, CSTO, Pacific pact, Beijing union, Arab coalition…), military access, gifts, relations.
-* AI for every country: economy, production, research, diplomacy, land/air/naval/missile warfare, nuclear doctrine.
+* AI for every country: economy, production, research, diplomacy, land, air and naval warfare.
 * Fog of war, map layers (political, terrain, relations, alliances, population, power, resources), minimap, save/load, autosave, sounds.
 * Score + world ranking, in-game objectives with rewards, day/night cycle, unit upgrades, cyber attacks.
 * Touch support (pinch, long-press = order), responsive layout.

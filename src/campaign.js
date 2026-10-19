@@ -1,6 +1,6 @@
 'use strict';
 /* Campaign systems. All simulation state lives in G and uses the seeded clock. */
-const GAME_VERSION = '0.3.0';
+const GAME_VERSION = '0.4.0';
 const SAVE_VERSION = 2;
 const WORLD_ID = `${P}:${S}:${NC}`;
 const PERSONALITIES = {
@@ -34,6 +34,7 @@ function initCampaign(saved) {
   }
   for (const pv of G.pv) { if (!Number.isFinite(pv.loyalty)) pv.loyalty = pv.o === PROV[pv.id].c ? 80 : 45; if (!pv.b.depot) pv.b.depot = 0; }
   for (const u of G.U.values()) initVeteran(u);
+  if (G.opts.casual) G.opts.supply = false;
   G.supply = null;
   updateSupply();
   if (!saved) recordEconomy();
@@ -93,19 +94,20 @@ function supplied(u) {
   return !!seen[u.loc] || ADJL[u.loc].some(p => seen[p]);
 }
 function campaignAttack(u) {
+  if (G.opts.casual) return 1;
   if (!G.campaign) return 1;
   const dom = UNITS[u.t].dom;
   const stance = u.stance === 'attack' ? 1.12 : u.stance === 'defend' ? 0.9 : u.stance === 'ambush' && u.entrench >= 6 && u.loc < P && ['forest', 'jungle', 'mountain'].includes(PROV[u.loc].terr) ? 1.18 : 1;
   return (1 + rankOfUnit(u) * 0.035) * (1 - (u.fatigue || 0) * 0.002) * stance * (supplied(u) ? 1 : 0.7) * (dom === 'air' ? weatherAt(u.loc).air : 1);
 }
-function campaignSpeed(u) { return !G.campaign ? 1 : weatherAt(u.loc).move * (supplied(u) ? 1 : 0.7) * (1 - (u.fatigue || 0) * 0.0015); }
+function campaignSpeed(u) { return G.opts.casual ? 1.6 : !G.campaign ? 1 : weatherAt(u.loc).move * (supplied(u) ? 1 : 0.7) * (1 - (u.fatigue || 0) * 0.0015); }
 function campaignTick() {
   if (!G.campaign) return;
   if (G.hour % 6 === 0 || G.supplyVersion !== G.ownVer) updateSupply();
   for (const u of G.U.values()) {
     initVeteran(u);
     const fighting = G.bat.get(u.loc) === G.hour;
-    u.fatigue = clamp(u.fatigue + (fighting ? 1.5 : u.st === 'move' || u.st === 'out' ? 0.3 : -1.5), 0, 100);
+    u.fatigue = G.opts.casual ? 0 : clamp(u.fatigue + (fighting ? 1.5 : u.st === 'move' || u.st === 'out' ? 0.3 : -1.5), 0, 100);
     if (fighting) u.xp = Math.min(150, u.xp + 0.6);
     if (u.loc < P && G.pv[u.loc].o === u.o && u.st === 'idle' && !fighting) u.entrench = Math.min(24, u.entrench + 1);
     else u.entrench = 0;
@@ -267,6 +269,7 @@ function resolveDecision(choice) {
   d.resolved = true; return '';
 }
 function campaignDay() {
+  if (G.opts.casual) { quickDay(); return; }
   const cp = G.campaign;
   cp.pacts = cp.pacts.filter(p => p.until > G.hour);
   cp.guarantees = cp.guarantees.filter(p => p.until > G.hour && G.C[p.a].alive && G.C[p.b].alive);

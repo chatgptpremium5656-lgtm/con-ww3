@@ -72,7 +72,8 @@ function economyTick() {
       if (v > cap) v = cap;
       r[k] = v;
     }
-    r.man = Math.min(c.manCap, r.man + c.manCap * 0.06 / 24);
+    quickEconomy(c);
+    r.man = Math.min(c.manCap, r.man + c.manCap * (G.opts.casual ? 0.18 : 0.06) / 24);
   }
 }
 const MAN_FRAC = 1;
@@ -126,34 +127,37 @@ function productionTick() {
   }
 }
 
-function unitCostFor(c, t) { return UNITS[t].cost; }
+function unitCostFor(c, t) { return quickCost(UNITS[t].cost); }
 function canQueue(p, t) {
   const pv = G.pv[p], d = UNITS[t], c = G.C[pv.o];
   if (!c.alive) return 'Страна уничтожена';
+  if (d.dom === 'msl') return 'Ракетное оружие удалено из игры';
   if (pv.b[d.req[0]] < d.req[1]) return `Нужно: ${BLD[d.req[0]].n} ур. ${d.req[1]}`;
   if (!unitAvail(c.id, t)) return 'Нужны технологии';
   if (d.dom === 'sea' && G.campaign && portBlockaded(c.id, p)) return 'Порт блокирован вражеским флотом';
   if (pv.q.length >= 5) return 'Очередь полна';
   if (d.dom === 'sea' && !isCoastal(p)) return 'Нужен выход к морю';
-  if (!canAfford(c.id, d.cost, unitMult(c.id))) return 'Не хватает ресурсов';
+  if (!canAfford(c.id, unitCostFor(c.id, t), unitMult(c.id))) return 'Не хватает ресурсов';
   if (c.res.man < (d.cost.p || 0)) return 'Не хватает живой силы';
   return '';
 }
 function queueUnit(p, t) {
   const err = canQueue(p, t); if (err) return err;
   const pv = G.pv[p], d = UNITS[t];
-  const um = unitMult(pv.o); pay(pv.o, d.cost, um); bump(pv.o, 'queued');
-  pv.q.push({ t, left: d.time, total: d.time, m: um });
+  const um = unitMult(pv.o); pay(pv.o, unitCostFor(pv.o, t), um); bump(pv.o, 'queued');
+  const time = G.opts.casual ? Math.max(4, Math.round(d.time * 0.4)) : d.time;
+  pv.q.push({ t, left: time, total: time, m: um });
   return '';
 }
 function cancelQueue(p, idx) {
   const pv = G.pv[p], it = pv.q[idx]; if (!it) return;
-  refund(pv.o, UNITS[it.t].cost, 0.9 * (it.m || 1)); pv.q.splice(idx, 1);
+  refund(pv.o, unitCostFor(pv.o, it.t), 0.9 * (it.m || 1)); pv.q.splice(idx, 1);
 }
-function bldCost(b, lvl) { const d = BLD[b], m = Math.pow(lvl, 1.4); const o = {}; for (const k in d.cost) o[k] = Math.round(d.cost[k] * m); return o; }
+function bldCost(b, lvl) { const d = BLD[b], m = Math.pow(lvl, 1.4); const o = {}; for (const k in d.cost) o[k] = Math.round(d.cost[k] * m); return quickCost(o); }
 function bldMax(c, b) { const co = G.C[c]; return Math.min(BLD[b].max, b === 'silo' ? 1 : (3 + Math.floor((co.techs.infra || 0) / 1.5))); }
 function canBuild(p, b) {
   const pv = G.pv[p], c = G.C[pv.o];
+  if (b === 'silo') return 'Ракетные шахты удалены';
   if (pv.bq) return 'Идёт строительство';
   const lvl = pv.b[b] + 1;
   if (lvl > bldMax(pv.o, b)) return 'Максимальный уровень';
@@ -168,7 +172,7 @@ function startBuild(p, b) {
   const err = canBuild(p, b); if (err) return err;
   const pv = G.pv[p], lvl = pv.b[b] + 1;
   pay(pv.o, bldCost(b, lvl)); bump(pv.o, 'built');
-  const t = Math.round(BLD[b].time * Math.pow(lvl, 0.75));
+  const t = Math.round(BLD[b].time * Math.pow(lvl, 0.75) * (G.opts.casual ? 0.5 : 1));
   pv.bq = { b, lvl, left: t, total: t };
   return '';
 }
@@ -178,12 +182,14 @@ function researchCost(c, kind, id, lvl) { return techCost(kind, id, lvl); }
 function researchOptions(c) {
   const co = G.C[c], out = [];
   for (const u of UNIT_ORDER) {
+    if (UNITS[u].dom === 'msl' || G.opts.casual && !QUICK_UNITS.includes(u)) continue;
     const g = co.gen[u];
     if (g >= MAX_GEN) continue;
     if (UNITS[u].tech && (co.techs[UNITS[u].tech[0]] || 0) < UNITS[u].tech[1]) continue;
     out.push({ k: 'u', id: u, lvl: g + 1, br: UNIT_BRANCH(u) });
   }
   for (const t in TECHS) {
+    if (['rockets', 'nuclear', 'abm'].includes(t)) continue;
     const l = co.techs[t] || 0; if (l >= TECHS[t].max) continue;
     if (TECHS[t].need && TECHS[t].need.some(([x, y]) => (co.techs[x] || 0) < y)) continue;
     out.push({ k: 't', id: t, lvl: l + 1, br: TECHS[t].br });
@@ -395,21 +401,7 @@ function orderAir(ids, tgt, mission) {
   }
   return { n, fails };
 }
-function fireMissile(ids, tgt) {
-  let n = 0;
-  for (const id of ids) {
-    const u = G.U.get(id); if (!u) continue; const d = UNITS[u.t];
-    if (d.dom !== 'msl' || u.st !== 'base') continue;
-    const dd = Math.hypot(lx(u.loc) - lx(tgt), ly(u.loc) - ly(tgt));
-    if (dd > d.rng) continue;
-    const to = tgt < P ? G.pv[tgt].o : -1;
-    if (to >= 0 && !G.war[u.o * NC + to]) continue;
-    atRemove(u); u.st = 'out'; u.tgt = tgt; u.mission = 'msl'; u.fl = { fx: lx(u.loc), fy: ly(u.loc), tx: lx(tgt), ty: ly(tgt), d: dd, done: 0 };
-    if (d.nuke) news('nuke', `⚠ ${G.C[u.o].n} запустила ядерную ракету по цели: ${locName(tgt)}!`, tgt, [u.o], 'g');
-    n++;
-  }
-  return n;
-}
+function fireMissile(ids, tgt) { return 0; }
 function returnToBase(u) {
   const bp = basePos(u);
   let base = u.bs;

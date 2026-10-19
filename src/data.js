@@ -6,7 +6,7 @@ const RES_INFO = {
   food: { n: 'Продовольствие', i: '🌾', c: '#e6c35c' },
   supp: { n: 'Припасы', i: '📦', c: '#c9a46b' },
   fuel: { n: 'Топливо', i: '⛽', c: '#d9763c' },
-  comp: { n: 'Компоненты', i: '🔩', c: '#9fb0c0' },
+  comp: { n: 'Материалы', i: '🔩', c: '#9fb0c0' },
   elec: { n: 'Электроника', i: '💻', c: '#5cc8e6' },
   rare: { n: 'Редкие материалы', i: '💎', c: '#c77de0' },
   man: { n: 'Живая сила', i: '👥', c: '#e0e0e0' }
@@ -68,7 +68,7 @@ const UNITS = {
   btm: { n: 'Баллистическая ракета', dom: 'msl', cls: 'air', a: { s: 60, h: 50, a: 0, n: 40, x: 80 }, arm: 0, spd: 55, vis: 0, hp: 100, rng: 420, cost: { c: 85, m: 20, e: 10, o: 5, r: 1, p: 0 }, time: 30, req: ['silo', 1], tech: ['rockets', 2], up: {}, desc: 'Оперативно-тактическая ракета. Мощный разовый удар.', oneshot: true },
   icbm: { n: 'МБР (ядерная)', dom: 'msl', cls: 'air', a: { s: 100, h: 100, a: 0, n: 100, x: 100 }, arm: 0, spd: 140, vis: 0, hp: 100, rng: 1100, nuke: true, cost: { c: 700, m: 120, e: 50, o: 20, r: 20, p: 2 }, time: 168, req: ['silo', 1], tech: ['nuclear', 1], up: {}, desc: 'ЯДЕРНОЕ ОРУЖИЕ. Уничтожает всё в провинции и заражает регион.', oneshot: true }
 };
-const UNIT_ORDER = ['inf', 'recon', 'mot', 'tank', 'arty', 'mlrs', 'aa', 'spec', 'fighter', 'bomber', 'heli', 'uav', 'sbomber', 'frigate', 'destroyer', 'cruiser', 'sub', 'carrier', 'transport', 'cruise', 'btm', 'icbm'];
+const UNIT_ORDER = ['inf', 'recon', 'mot', 'tank', 'arty', 'mlrs', 'aa', 'spec', 'fighter', 'bomber', 'heli', 'uav', 'sbomber', 'frigate', 'destroyer', 'cruiser', 'sub', 'carrier', 'transport'];
 const GEN_NAMES = ['I', 'II', 'III', 'IV'];
 
 /* National techs */

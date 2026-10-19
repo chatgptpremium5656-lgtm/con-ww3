@@ -73,6 +73,7 @@ function ustat(u) {
 }
 function unitAvail(c, t) { // can country c build unit type t (tech-wise)?
   const d = UNITS[t], co = G.C[c];
+  if (d.dom === 'msl' || G.opts.casual && !QUICK_UNITS.includes(t)) return false;
   if (d.tech && (co.techs[d.tech[0]] || 0) < d.tech[1]) return false;
   if (d.dom === 'sea' && t === 'carrier' && (co.techs.indus || 0) < 2) return false;
   return true;
@@ -82,7 +83,7 @@ function unitAvail(c, t) { // can country c build unit type t (tech-wise)?
 function newGameShell(opts) {
   const seed = opts.seed || ((Math.random() * 1e9) | 0);
   G = {
-    opts: Object.assign({ scenario: 'eve', diff: 'normal', win: 0.55, seed }, opts),
+    opts: Object.assign({ scenario: 'eve', diff: 'normal', win: 0.55, casual: true, supply: false, seed }, opts),
     seed, rng: makeRng(seed), hour: 0, speed: 1, paused: true,
     C: [], pv: [], U: new Map(), nextU: 1, at: Array.from({ length: N }, () => []),
     rel: new Int8Array(NC * NC), war: new Uint8Array(NC * NC), acc: new Uint8Array(NC * NC), warStart: new Int32Array(NC * NC),
@@ -122,7 +123,7 @@ function newGame(opts) {
   for (const [a, b] of sc.wars) {
     if (cidx[a] !== undefined && cidx[b] !== undefined && !G.war[cidx[a] * NC + cidx[b]]) { setWar(cidx[a], cidx[b]); addRel(cidx[a], cidx[b], -70); }
   }
-  initCampaign();
+  initCampaign(); applyQuickRules();
   if (G.opts.stock && G.opts.stock !== 1) for (const k of RES) G.C[G.player].res[k] *= G.opts.stock;
   G.vp0 = G.C[G.player].vp;
   if (G.opts.doc && DOCS[G.opts.doc]) G.C[G.player].doc = G.opts.doc;
@@ -268,6 +269,7 @@ function deployStart(c) {
 /* ---------- units ---------- */
 function spawnUnit(c, t, loc) {
   const d = UNITS[t];
+  if (d.dom === 'msl') return null;
   const u = { id: G.nextU++, t, o: c, g: G.C[c].gen[t] || 0, loc, hp: 100, mor: 100, st: 'idle', path: [], leg: null, cargo: [], carrier: 0, bs: 0, fuel: d.fuel || 0, tgt: -1, rounds: 0, born: G.hour, kills: 0 };
   if (d.dom === 'air' || d.dom === 'msl') { u.st = 'base'; u.bs = loc; }
   G.U.set(u.id, u);
@@ -336,6 +338,7 @@ function recalc(c) {
   }
   const gf = GOV_FX[co.gov] || GOV_FX.autocracy; out.cash *= gf.cash;
   out.fuel += 1.2 * co.provs.length * (co.techs.indus >= 1 ? 1.4 : 1); out.supp += 0.8 * co.provs.length;
+  if (G.opts.casual) { out.cash *= 1.5; out.comp *= 1.5; }
   co.inc = out; co.vp = co.provs.reduce((a, p) => a + PROV[p].vp, 0);
   co.manCap = out.pop / 1000 * 0.009 * gf.man;
   co.dirty = false;
@@ -355,5 +358,6 @@ function calcUse(c) {
     use.cash += 0.4 * (UNITS[u.t].cost.c || 5) / 10;
   }
   use.food += co.foodNeed;
+  if (G.opts.casual) { use.cash *= 0.5; use.fuel *= 0.5; }
   co.use = use;
 }

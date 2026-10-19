@@ -1,5 +1,5 @@
 const fs=require('fs');const path=require('path');
-const files=['src/world.js','src/world_decode.js','src/data.js','src/engine_core.js','src/engine_sim.js','src/engine_dipl.js','src/ai.js','src/campaign.js'];
+const files=['src/world.js','src/world_decode.js','src/data.js','src/engine_core.js','src/engine_sim.js','src/engine_dipl.js','src/ai.js','src/campaign.js', 'src/quickplay.js'];
 let code=files.map(f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8')).join('\n');
 code=code.replace("function unloadAll(u, p) {","function unloadAll(u, p) { globalThis.__unl=(globalThis.__unl||0)+1;");
 code=code.replace("function loadOnTransport(tid, ids) {","function loadOnTransport(tid, ids) { globalThis.__ld=(globalThis.__ld||0)+1;");

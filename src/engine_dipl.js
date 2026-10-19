@@ -208,7 +208,7 @@ function loadGame(str) {
   G.rel = unsparse(o.rel, Int8Array); G.war = unsparse(o.war, Uint8Array); G.acc = unsparse(o.acc, Uint8Array); G.warStart = unsparse(o.warStart, Int32Array); G.wlost = unsparse(o.wlost, Int16Array); G.truce = o.truce ? unsparse(o.truce, Int32Array) : new Int32Array(NC * NC);
   G.al = o.al; G.goalsDone = o.goals || []; G.spies = o.spies || []; G.spyId = o.spyId || 0; G.intel = o.intel || {}; G.news = o.news; G.newsId = o.news.length ? o.news[o.news.length - 1].id || 0 : 0;
   G.autoBuy = o.autoBuy; G.autoDef = o.autoDef; G.fogOff = o.fogOff;
-  initCampaign(o.campaign);
+  initCampaign(o.campaign); applyQuickRules();
   for (const c of G.C) if (c.alive && (o.v === 1 || !c.inc || !c.use)) { c.dirty = true; recalc(c); calcUse(c); }
   G.totalVP = PROV.reduce((a, p) => a + p.vp, 0);
   updateVis(true);

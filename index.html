@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="game-version" content="0.3.0">
+<meta name="game-version" content="0.4.0">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Conflict of Nations: World War 3 — клон</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230e2740' stroke='%23f0a830' stroke-width='2'/%3E%3Cpath d='M7 12l5-3 4 2 5-1 4 4-3 3-4-1-3 4-3-1-2-4z' fill='%235b8def'/%3E%3Ccircle cx='21' cy='20' r='4' fill='%23e0503c'/%3E%3C/svg%3E">
@@ -230,6 +230,15 @@ body[data-theme=light] .btn.pri{background:#e6b85d;color:#201400}body[data-theme
 /* Keep the new toolbar clear of objectives, tutorials and the mobile rail. */
 #goals{top:92px}#tut{top:92px}
 @media(max-width:700px){#campaign-bar{left:48px;max-width:calc(100% - 56px)}#legend,#tut{top:138px}}
+.quick-game #goals,.quick-game #tut,.quick-game #legend{display:none!important}
+.quick-game #leftbar button{height:58px}.quick-game #campaign-bar{left:66px}
+.quick-game #tb-res .rchip{min-width:100px}.quick-game #unit-panel .acts{padding:12px;gap:8px}
+.quick-recruits{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick-recruit{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;min-height:85px}.quick-recruit small{font-size:11px;white-space:normal}
+.quick-builds{flex-wrap:wrap;gap:8px}.quick-menu{display:grid;gap:12px}.quick-menu .btn{min-height:40px}
+.quick-start-more>summary{padding:10px;cursor:pointer;color:var(--tx2)}
+.quick-game #prov-panel h4{font-size:14px}.quick-game #prov-panel .btn{min-height:38px}
+@media(max-width:700px){.quick-game #campaign-bar{left:48px}.quick-game #tb-res .rchip{min-width:85px}.quick-game #prov-panel .btn{min-height:44px}}
+.quick-recruit{min-height:72px;padding:8px}.quick-extra-units summary{cursor:pointer;color:var(--tx2);padding:12px 0}
 
 </style>
 </head>
@@ -300,7 +309,7 @@ const RES_INFO = {
   food: { n: 'Продовольствие', i: '🌾', c: '#e6c35c' },
   supp: { n: 'Припасы', i: '📦', c: '#c9a46b' },
   fuel: { n: 'Топливо', i: '⛽', c: '#d9763c' },
-  comp: { n: 'Компоненты', i: '🔩', c: '#9fb0c0' },
+  comp: { n: 'Материалы', i: '🔩', c: '#9fb0c0' },
   elec: { n: 'Электроника', i: '💻', c: '#5cc8e6' },
   rare: { n: 'Редкие материалы', i: '💎', c: '#c77de0' },
   man: { n: 'Живая сила', i: '👥', c: '#e0e0e0' }
@@ -362,7 +371,7 @@ const UNITS = {
   btm: { n: 'Баллистическая ракета', dom: 'msl', cls: 'air', a: { s: 60, h: 50, a: 0, n: 40, x: 80 }, arm: 0, spd: 55, vis: 0, hp: 100, rng: 420, cost: { c: 85, m: 20, e: 10, o: 5, r: 1, p: 0 }, time: 30, req: ['silo', 1], tech: ['rockets', 2], up: {}, desc: 'Оперативно-тактическая ракета. Мощный разовый удар.', oneshot: true },
   icbm: { n: 'МБР (ядерная)', dom: 'msl', cls: 'air', a: { s: 100, h: 100, a: 0, n: 100, x: 100 }, arm: 0, spd: 140, vis: 0, hp: 100, rng: 1100, nuke: true, cost: { c: 700, m: 120, e: 50, o: 20, r: 20, p: 2 }, time: 168, req: ['silo', 1], tech: ['nuclear', 1], up: {}, desc: 'ЯДЕРНОЕ ОРУЖИЕ. Уничтожает всё в провинции и заражает регион.', oneshot: true }
 };
-const UNIT_ORDER = ['inf', 'recon', 'mot', 'tank', 'arty', 'mlrs', 'aa', 'spec', 'fighter', 'bomber', 'heli', 'uav', 'sbomber', 'frigate', 'destroyer', 'cruiser', 'sub', 'carrier', 'transport', 'cruise', 'btm', 'icbm'];
+const UNIT_ORDER = ['inf', 'recon', 'mot', 'tank', 'arty', 'mlrs', 'aa', 'spec', 'fighter', 'bomber', 'heli', 'uav', 'sbomber', 'frigate', 'destroyer', 'cruiser', 'sub', 'carrier', 'transport'];
 const GEN_NAMES = ['I', 'II', 'III', 'IV'];
 
 /* National techs */
@@ -506,6 +515,7 @@ function ustat(u) {
 }
 function unitAvail(c, t) { // can country c build unit type t (tech-wise)?
   const d = UNITS[t], co = G.C[c];
+  if (d.dom === 'msl' || G.opts.casual && !QUICK_UNITS.includes(t)) return false;
   if (d.tech && (co.techs[d.tech[0]] || 0) < d.tech[1]) return false;
   if (d.dom === 'sea' && t === 'carrier' && (co.techs.indus || 0) < 2) return false;
   return true;
@@ -515,7 +525,7 @@ function unitAvail(c, t) { // can country c build unit type t (tech-wise)?
 function newGameShell(opts) {
   const seed = opts.seed || ((Math.random() * 1e9) | 0);
   G = {
-    opts: Object.assign({ scenario: 'eve', diff: 'normal', win: 0.55, seed }, opts),
+    opts: Object.assign({ scenario: 'eve', diff: 'normal', win: 0.55, casual: true, supply: false, seed }, opts),
     seed, rng: makeRng(seed), hour: 0, speed: 1, paused: true,
     C: [], pv: [], U: new Map(), nextU: 1, at: Array.from({ length: N }, () => []),
     rel: new Int8Array(NC * NC), war: new Uint8Array(NC * NC), acc: new Uint8Array(NC * NC), warStart: new Int32Array(NC * NC),
@@ -555,7 +565,7 @@ function newGame(opts) {
   for (const [a, b] of sc.wars) {
     if (cidx[a] !== undefined && cidx[b] !== undefined && !G.war[cidx[a] * NC + cidx[b]]) { setWar(cidx[a], cidx[b]); addRel(cidx[a], cidx[b], -70); }
   }
-  initCampaign();
+  initCampaign(); applyQuickRules();
   if (G.opts.stock && G.opts.stock !== 1) for (const k of RES) G.C[G.player].res[k] *= G.opts.stock;
   G.vp0 = G.C[G.player].vp;
   if (G.opts.doc && DOCS[G.opts.doc]) G.C[G.player].doc = G.opts.doc;
@@ -701,6 +711,7 @@ function deployStart(c) {
 /* ---------- units ---------- */
 function spawnUnit(c, t, loc) {
   const d = UNITS[t];
+  if (d.dom === 'msl') return null;
   const u = { id: G.nextU++, t, o: c, g: G.C[c].gen[t] || 0, loc, hp: 100, mor: 100, st: 'idle', path: [], leg: null, cargo: [], carrier: 0, bs: 0, fuel: d.fuel || 0, tgt: -1, rounds: 0, born: G.hour, kills: 0 };
   if (d.dom === 'air' || d.dom === 'msl') { u.st = 'base'; u.bs = loc; }
   G.U.set(u.id, u);
@@ -769,6 +780,7 @@ function recalc(c) {
   }
   const gf = GOV_FX[co.gov] || GOV_FX.autocracy; out.cash *= gf.cash;
   out.fuel += 1.2 * co.provs.length * (co.techs.indus >= 1 ? 1.4 : 1); out.supp += 0.8 * co.provs.length;
+  if (G.opts.casual) { out.cash *= 1.5; out.comp *= 1.5; }
   co.inc = out; co.vp = co.provs.reduce((a, p) => a + PROV[p].vp, 0);
   co.manCap = out.pop / 1000 * 0.009 * gf.man;
   co.dirty = false;
@@ -788,6 +800,7 @@ function calcUse(c) {
     use.cash += 0.4 * (UNITS[u.t].cost.c || 5) / 10;
   }
   use.food += co.foodNeed;
+  if (G.opts.casual) { use.cash *= 0.5; use.fuel *= 0.5; }
   co.use = use;
 }
 
@@ -865,7 +878,8 @@ function economyTick() {
       if (v > cap) v = cap;
       r[k] = v;
     }
-    r.man = Math.min(c.manCap, r.man + c.manCap * 0.06 / 24);
+    quickEconomy(c);
+    r.man = Math.min(c.manCap, r.man + c.manCap * (G.opts.casual ? 0.18 : 0.06) / 24);
   }
 }
 const MAN_FRAC = 1;
@@ -919,34 +933,37 @@ function productionTick() {
   }
 }
 
-function unitCostFor(c, t) { return UNITS[t].cost; }
+function unitCostFor(c, t) { return quickCost(UNITS[t].cost); }
 function canQueue(p, t) {
   const pv = G.pv[p], d = UNITS[t], c = G.C[pv.o];
   if (!c.alive) return 'Страна уничтожена';
+  if (d.dom === 'msl') return 'Ракетное оружие удалено из игры';
   if (pv.b[d.req[0]] < d.req[1]) return `Нужно: ${BLD[d.req[0]].n} ур. ${d.req[1]}`;
   if (!unitAvail(c.id, t)) return 'Нужны технологии';
   if (d.dom === 'sea' && G.campaign && portBlockaded(c.id, p)) return 'Порт блокирован вражеским флотом';
   if (pv.q.length >= 5) return 'Очередь полна';
   if (d.dom === 'sea' && !isCoastal(p)) return 'Нужен выход к морю';
-  if (!canAfford(c.id, d.cost, unitMult(c.id))) return 'Не хватает ресурсов';
+  if (!canAfford(c.id, unitCostFor(c.id, t), unitMult(c.id))) return 'Не хватает ресурсов';
   if (c.res.man < (d.cost.p || 0)) return 'Не хватает живой силы';
   return '';
 }
 function queueUnit(p, t) {
   const err = canQueue(p, t); if (err) return err;
   const pv = G.pv[p], d = UNITS[t];
-  const um = unitMult(pv.o); pay(pv.o, d.cost, um); bump(pv.o, 'queued');
-  pv.q.push({ t, left: d.time, total: d.time, m: um });
+  const um = unitMult(pv.o); pay(pv.o, unitCostFor(pv.o, t), um); bump(pv.o, 'queued');
+  const time = G.opts.casual ? Math.max(4, Math.round(d.time * 0.4)) : d.time;
+  pv.q.push({ t, left: time, total: time, m: um });
   return '';
 }
 function cancelQueue(p, idx) {
   const pv = G.pv[p], it = pv.q[idx]; if (!it) return;
-  refund(pv.o, UNITS[it.t].cost, 0.9 * (it.m || 1)); pv.q.splice(idx, 1);
+  refund(pv.o, unitCostFor(pv.o, it.t), 0.9 * (it.m || 1)); pv.q.splice(idx, 1);
 }
-function bldCost(b, lvl) { const d = BLD[b], m = Math.pow(lvl, 1.4); const o = {}; for (const k in d.cost) o[k] = Math.round(d.cost[k] * m); return o; }
+function bldCost(b, lvl) { const d = BLD[b], m = Math.pow(lvl, 1.4); const o = {}; for (const k in d.cost) o[k] = Math.round(d.cost[k] * m); return quickCost(o); }
 function bldMax(c, b) { const co = G.C[c]; return Math.min(BLD[b].max, b === 'silo' ? 1 : (3 + Math.floor((co.techs.infra || 0) / 1.5))); }
 function canBuild(p, b) {
   const pv = G.pv[p], c = G.C[pv.o];
+  if (b === 'silo') return 'Ракетные шахты удалены';
   if (pv.bq) return 'Идёт строительство';
   const lvl = pv.b[b] + 1;
   if (lvl > bldMax(pv.o, b)) return 'Максимальный уровень';
@@ -961,7 +978,7 @@ function startBuild(p, b) {
   const err = canBuild(p, b); if (err) return err;
   const pv = G.pv[p], lvl = pv.b[b] + 1;
   pay(pv.o, bldCost(b, lvl)); bump(pv.o, 'built');
-  const t = Math.round(BLD[b].time * Math.pow(lvl, 0.75));
+  const t = Math.round(BLD[b].time * Math.pow(lvl, 0.75) * (G.opts.casual ? 0.5 : 1));
   pv.bq = { b, lvl, left: t, total: t };
   return '';
 }
@@ -971,12 +988,14 @@ function researchCost(c, kind, id, lvl) { return techCost(kind, id, lvl); }
 function researchOptions(c) {
   const co = G.C[c], out = [];
   for (const u of UNIT_ORDER) {
+    if (UNITS[u].dom === 'msl' || G.opts.casual && !QUICK_UNITS.includes(u)) continue;
     const g = co.gen[u];
     if (g >= MAX_GEN) continue;
     if (UNITS[u].tech && (co.techs[UNITS[u].tech[0]] || 0) < UNITS[u].tech[1]) continue;
     out.push({ k: 'u', id: u, lvl: g + 1, br: UNIT_BRANCH(u) });
   }
   for (const t in TECHS) {
+    if (['rockets', 'nuclear', 'abm'].includes(t)) continue;
     const l = co.techs[t] || 0; if (l >= TECHS[t].max) continue;
     if (TECHS[t].need && TECHS[t].need.some(([x, y]) => (co.techs[x] || 0) < y)) continue;
     out.push({ k: 't', id: t, lvl: l + 1, br: TECHS[t].br });
@@ -1188,21 +1207,7 @@ function orderAir(ids, tgt, mission) {
   }
   return { n, fails };
 }
-function fireMissile(ids, tgt) {
-  let n = 0;
-  for (const id of ids) {
-    const u = G.U.get(id); if (!u) continue; const d = UNITS[u.t];
-    if (d.dom !== 'msl' || u.st !== 'base') continue;
-    const dd = Math.hypot(lx(u.loc) - lx(tgt), ly(u.loc) - ly(tgt));
-    if (dd > d.rng) continue;
-    const to = tgt < P ? G.pv[tgt].o : -1;
-    if (to >= 0 && !G.war[u.o * NC + to]) continue;
-    atRemove(u); u.st = 'out'; u.tgt = tgt; u.mission = 'msl'; u.fl = { fx: lx(u.loc), fy: ly(u.loc), tx: lx(tgt), ty: ly(tgt), d: dd, done: 0 };
-    if (d.nuke) news('nuke', `⚠ ${G.C[u.o].n} запустила ядерную ракету по цели: ${locName(tgt)}!`, tgt, [u.o], 'g');
-    n++;
-  }
-  return n;
-}
+function fireMissile(ids, tgt) { return 0; }
 function returnToBase(u) {
   const bp = basePos(u);
   let base = u.bs;
@@ -1871,7 +1876,7 @@ function loadGame(str) {
   G.rel = unsparse(o.rel, Int8Array); G.war = unsparse(o.war, Uint8Array); G.acc = unsparse(o.acc, Uint8Array); G.warStart = unsparse(o.warStart, Int32Array); G.wlost = unsparse(o.wlost, Int16Array); G.truce = o.truce ? unsparse(o.truce, Int32Array) : new Int32Array(NC * NC);
   G.al = o.al; G.goalsDone = o.goals || []; G.spies = o.spies || []; G.spyId = o.spyId || 0; G.intel = o.intel || {}; G.news = o.news; G.newsId = o.news.length ? o.news[o.news.length - 1].id || 0 : 0;
   G.autoBuy = o.autoBuy; G.autoDef = o.autoDef; G.fogOff = o.fogOff;
-  initCampaign(o.campaign);
+  initCampaign(o.campaign); applyQuickRules();
   for (const c of G.C) if (c.alive && (o.v === 1 || !c.inc || !c.use)) { c.dirty = true; recalc(c); calcUse(c); }
   G.totalVP = PROV.reduce((a, p) => a + p.vp, 0);
   updateVis(true);
@@ -2267,7 +2272,7 @@ function aiSpies(C, enemies) {
 
 'use strict';
 /* Campaign systems. All simulation state lives in G and uses the seeded clock. */
-const GAME_VERSION = '0.3.0';
+const GAME_VERSION = '0.4.0';
 const SAVE_VERSION = 2;
 const WORLD_ID = `${P}:${S}:${NC}`;
 const PERSONALITIES = {
@@ -2301,6 +2306,7 @@ function initCampaign(saved) {
   }
   for (const pv of G.pv) { if (!Number.isFinite(pv.loyalty)) pv.loyalty = pv.o === PROV[pv.id].c ? 80 : 45; if (!pv.b.depot) pv.b.depot = 0; }
   for (const u of G.U.values()) initVeteran(u);
+  if (G.opts.casual) G.opts.supply = false;
   G.supply = null;
   updateSupply();
   if (!saved) recordEconomy();
@@ -2360,19 +2366,20 @@ function supplied(u) {
   return !!seen[u.loc] || ADJL[u.loc].some(p => seen[p]);
 }
 function campaignAttack(u) {
+  if (G.opts.casual) return 1;
   if (!G.campaign) return 1;
   const dom = UNITS[u.t].dom;
   const stance = u.stance === 'attack' ? 1.12 : u.stance === 'defend' ? 0.9 : u.stance === 'ambush' && u.entrench >= 6 && u.loc < P && ['forest', 'jungle', 'mountain'].includes(PROV[u.loc].terr) ? 1.18 : 1;
   return (1 + rankOfUnit(u) * 0.035) * (1 - (u.fatigue || 0) * 0.002) * stance * (supplied(u) ? 1 : 0.7) * (dom === 'air' ? weatherAt(u.loc).air : 1);
 }
-function campaignSpeed(u) { return !G.campaign ? 1 : weatherAt(u.loc).move * (supplied(u) ? 1 : 0.7) * (1 - (u.fatigue || 0) * 0.0015); }
+function campaignSpeed(u) { return G.opts.casual ? 1.6 : !G.campaign ? 1 : weatherAt(u.loc).move * (supplied(u) ? 1 : 0.7) * (1 - (u.fatigue || 0) * 0.0015); }
 function campaignTick() {
   if (!G.campaign) return;
   if (G.hour % 6 === 0 || G.supplyVersion !== G.ownVer) updateSupply();
   for (const u of G.U.values()) {
     initVeteran(u);
     const fighting = G.bat.get(u.loc) === G.hour;
-    u.fatigue = clamp(u.fatigue + (fighting ? 1.5 : u.st === 'move' || u.st === 'out' ? 0.3 : -1.5), 0, 100);
+    u.fatigue = G.opts.casual ? 0 : clamp(u.fatigue + (fighting ? 1.5 : u.st === 'move' || u.st === 'out' ? 0.3 : -1.5), 0, 100);
     if (fighting) u.xp = Math.min(150, u.xp + 0.6);
     if (u.loc < P && G.pv[u.loc].o === u.o && u.st === 'idle' && !fighting) u.entrench = Math.min(24, u.entrench + 1);
     else u.entrench = 0;
@@ -2534,6 +2541,7 @@ function resolveDecision(choice) {
   d.resolved = true; return '';
 }
 function campaignDay() {
+  if (G.opts.casual) { quickDay(); return; }
   const cp = G.campaign;
   cp.pacts = cp.pacts.filter(p => p.until > G.hour);
   cp.guarantees = cp.guarantees.filter(p => p.until > G.hour && G.C[p.a].alive && G.C[p.b].alive);
@@ -2670,6 +2678,54 @@ function validateCampaign(cp, fail) {
     for (const [id, s] of Object.entries(r.sides)) if (!validId(+id) || !s || !s.lost || !Number.isFinite(s.units) || !Number.isFinite(s.damage) || Object.entries(s.lost).some(([t, n]) => !Object.hasOwn(UNITS, t) || !Number.isInteger(n) || n < 0)) fail('неверные потери');
   }
   if (!cp.treasury || !Number.isFinite(cp.treasury.days) || cp.treasury.days < 1 || cp.treasury.days > 30 || !Number.isFinite(cp.treasury.floor) || cp.treasury.floor < 0 || !Number.isFinite(cp.treasury.budget) || cp.treasury.budget < 0 || !Number.isFinite(cp.treasury.maxPrice) || cp.treasury.maxPrice < 1 || cp.treasury.maxPrice > 5) fail('неверные настройки казначейства');
+}
+
+'use strict';
+/* A shorter game loop: earn, recruit, move, capture. Missile definitions remain
+   readable only so old saves can be migrated safely; no one can create/fire them. */
+const QUICK_UNITS = ['inf', 'recon', 'tank', 'arty', 'fighter', 'bomber', 'frigate', 'transport'];
+function quickCost(cost) {
+  if (!G?.opts.casual) return cost;
+  return { c: Math.max(1, Math.round((cost.c || 0) * 0.65)), m: Math.round(((cost.m || 0) + (cost.s || 0) + (cost.e || 0) + (cost.r || 0)) * 0.6), p: cost.p || 0 };
+}
+function applyQuickRules() {
+  // Removing old missiles must not inflate combat loss counters.
+  for (const u of [...G.U.values()]) if (UNITS[u.t].dom === 'msl') {
+    if (!['cargo', 'out', 'back'].includes(u.st)) atRemove(u);
+    G.U.delete(u.id);
+  }
+  for (const pv of G.pv) {
+    for (const q of pv.q) if (UNITS[q.t].dom === 'msl') refund(pv.o, UNITS[q.t].cost, q.m || 1);
+    pv.q = pv.q.filter(q => UNITS[q.t].dom !== 'msl');
+    if (pv.bq?.b === 'silo') { refund(pv.o, bldCost('silo', pv.bq.lvl), 0.9); pv.bq = null; }
+    if (pv.b.silo) { pv.b.eco = Math.max(pv.b.eco, 1); pv.b.silo = 0; }
+    if (G.opts.casual) { pv.fall = 0; pv.loyalty = 85; }
+  }
+  if (G.opts.casual) {
+    G.opts.supply = false; G.autoBuy = false;
+    for (const c of G.C) { c.tax = 1; c.inflation = 0; }
+    G.campaign.routes = []; G.campaign.debts = []; G.campaign.reparations = [];
+  }
+  for (const c of G.C) c.nukes = false;
+}
+function quickDay() {
+  const cp = G.campaign;
+  // Close inherited optional contracts without leaving invisible payments running.
+  cp.pacts = cp.pacts.filter(p => p.until > G.hour);
+  for (const c of G.C) {
+    if (c.leaveAt && c.leaveAt <= G.hour) { c.leaveAt = 0; leaveAlliance(c.id, true); }
+    if (c.alive) recalc(c);
+    if (G.hour % 168 === 0) for (const t of QUICK_UNITS) c.gen[t] = Math.min(MAX_GEN, c.gen[t] + 1);
+  }
+  if (G.hour % 168 === 0) { for (const u of G.U.values()) u.g = G.C[u.o].gen[u.t]; note(G.player, 'research', '⬆ Армия стала сильнее! Техника улучшена автоматически.', -1); }
+  recordEconomy(); checkAchievements();
+}
+function quickEconomy(c) {
+  if (!G.opts.casual) return;
+  for (const k of ['food', 'supp', 'fuel', 'elec', 'rare']) {
+    c.res[k] = Math.max(c.res[k], (c.use[k] || 0) * 10 + 500);
+    c.short[k] = false;
+  }
 }
 
 'use strict';
@@ -2953,7 +3009,7 @@ function drawBase() {
 function drawHL() {
   const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr, px = 1 / z;
   ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (MV.W / 2 - MV.cam.cx * z), dpr * (MV.H / 2 - MV.cam.cy * z));
-  if (G && MV.daynight !== false) {
+  if (G && !G.opts.casual && MV.daynight !== false) {
     const sub = (12 - (G.hour % 24)) * 15, g = ctx.createLinearGradient(0, 0, WW, 0);
     for (let i = 0; i <= 48; i++) { const lon = -180 + i * 7.5; const d = Math.cos((lon - sub) * Math.PI / 180); g.addColorStop(i / 48, `rgba(2,6,30,${(0.36 * clamp((0.12 - d) / 1.05, 0, 1)).toFixed(3)})`); }
     ctx.fillStyle = g; ctx.fillRect(0, 0, WW, WH);
@@ -3471,10 +3527,10 @@ function updateSpeedBtns() {
 const LEFT = [['overview', '🌍', 'Обзор'], ['army', '🎖', 'Армия'], ['research', '🔬', 'Наука'], ['diplomacy', '🤝', 'Дипл.'], ['market', '💱', 'Рынок'], ['events', '📰', 'События'], ['help', '❓', 'Справка']];
 const MODES = [['political', '🏳', 'Политическая'], ['terrain', '⛰', 'Рельеф'], ['relations', '🤝', 'Отношения'], ['bloc', '🛡', 'Альянсы'], ['pop', '👥', 'Население'], ['power', '💥', 'Военная мощь'], ['res:fuel', '⛽', 'Нефть'], ['res:comp', '🔩', 'Металлы'], ['res:food', '🌾', 'Еда'], ['res:rare', '💎', 'Редкие'], ['res:supp', '🏭', 'Промышленность'], ['res:elec', '💻', 'Электроника']];
 function buildHUD() {
-  $('leftbar').innerHTML = LEFT.map(([m, i, t]) => `<button data-act="modal" data-m="${m}" data-tip="${t}" id="lb-${m}">${i}<span>${t}</span></button>`).join('');
+  $('leftbar').innerHTML = LEFT.filter(([m]) => !G.opts.casual || ['army', 'diplomacy', 'events'].includes(m)).map(([m, i, t]) => `<button data-act="modal" data-m="${m}" data-tip="${t}" id="lb-${m}">${i}<span>${t}</span></button>`).join('');
   $('tb-speed').innerHTML = `<button data-act="speed" data-v="0" data-tip="Пауза (Пробел)">⏸</button>` + [1, 2, 3, 4, 5].map(v => `<button data-act="speed" data-v="${v}" data-tip="Скорость ${v} (клавиша ${v})">${v === 1 ? '▶' : v + '×'}</button>`).join('');
   $('tb-right').innerHTML = `<button class="ibtn" data-act="modal" data-m="events" data-tip="Сообщения" id="bellb">🔔<span class="badge hidden" id="bell"></span></button><button class="ibtn" data-act="modal" data-m="menu" data-tip="Меню">☰</button>`;
-  $('mapmodes').innerHTML = MODES.slice(0, 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
+  $('mapmodes').innerHTML = MODES.slice(0, G.opts.casual ? 3 : 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
   $('mini-wrap').style.display = 'block';
   updateSpeedBtns(); updateModeBtns(); campaignToolbar();
 }
@@ -3501,8 +3557,8 @@ function refreshHUD(force) {
   $('tb-country').innerHTML = `${flagImg(G.player, 'lg')}<div><b>${esc(C.n)}</b><small>${C.alliance >= 0 ? esc(G.al[C.alliance].n) : 'Без альянса'} · ★ ${C.vp}</small></div>`;
   $('tb-time').innerHTML = `<b>${dateStr(G.hour)}</b><br><small>${timeStr(G.hour)} · ${G.paused ? 'ПАУЗА' : 'x' + G.speed}</small>`;
   let h = '';
-  for (const k of [...RES, 'man']) {
-    const inc = k === 'man' ? C.manCap * 0.06 : (C.inc[k] || 0), use = k === 'man' ? 0 : (C.use[k] || 0), net = inc - use;
+  for (const k of (G.opts.casual ? ['cash', 'comp', 'man'] : [...RES, 'man'])) {
+    const inc = k === 'man' ? C.manCap * (G.opts.casual ? 0.18 : 0.06) : (C.inc[k] || 0), use = k === 'man' ? 0 : (C.use[k] || 0), net = inc - use;
     const cap = k === 'man' ? ' / ' + fmt(C.manCap) : '';
     const tip = `<b>${RES_INFO[k].n}</b><br>Доход: +${fmt(inc)}/сут<br>Расход: −${fmt(use)}/сут<br>Баланс: ${net >= 0 ? '+' : ''}${fmt(net)}/сут${k === 'man' ? '<br>Максимум: ' + fmt(C.manCap) : ''}${C.short[k] ? '<br><span style="color:#e0503c">ДЕФИЦИТ! Войска теряют боеспособность</span>' : ''}`;
     h += `<div class="rchip ${C.short[k] ? 'low' : ''}" data-act="modal" data-m="market" data-tip='${tip.replace(/'/g, '&#39;')}'><span style="font-size:16px">${RES_INFO[k].i}</span><div><div class="v">${fmt(C.res[k])}${cap ? '<small style="font-weight:400;color:#8fa6bd">' + cap + '</small>' : ''}</div><div class="d ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : ''}${fmt(net)}</div></div></div>`;
@@ -3531,7 +3587,7 @@ function refreshHUD(force) {
   { const done = G.goalsDone || []; const todo = GOALS.filter(g => !done.includes(g.id)).slice(0, 3);
     const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Рейтинг: ${rankOf(G.player)}-е место, ${fmt(scoreOf(G.player))} очков</div><div class="note">★ Победа: ${G.myVP || 0} / ${Math.ceil(G.totalVP * G.opts.win)} ПО (${Math.round((G.myVP || 0) / G.totalVP * 100)}% из ${Math.round(G.opts.win * 100)}%)</div>`;
     if (UI._goalsH !== html) { gp.innerHTML = html; UI._goalsH = html; } }
-  renderProvPanel(force); renderUnitPanel(force); updateTutorial(); campaignRefresh();
+  renderProvPanel(force); renderUnitPanel(force); if (!G.opts.casual) updateTutorial(); else $('tut').classList.add('hidden'); campaignRefresh();
   if (UI.modal && (!document.activeElement || !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) renderModal(true);
 }
 
@@ -3577,6 +3633,7 @@ function renderProvPanel(force) {
   const scrollTop = el.scrollTop;
   el.classList.remove('hidden');
   if (SEL.sea >= 0) { el.innerHTML = seaPanelHTML(SEL.sea); el.scrollTop = scrollTop; return; }
+  if (G.opts.casual) { el.innerHTML = quickProvinceHTML(SEL.prov); el.scrollTop = scrollTop; return; }
   const p = SEL.prov, pr = PROV[p], pv = G.pv[p], o = G.C[pv.o], me = pv.o === G.player;
   let h = `<div class="ph">${flagImg(pv.o, 'lg')}<h3>${esc(pr.name)}<small>${esc(o.n)}${G.C[pv.o].cap === p ? ' · ⭐ Столица' : ''} · ${TERRAIN[pr.terr].n}</small></h3>${pr.vp ? `<span data-tip="Победные очки: ${pr.vp}">${stars(pr.vp, 6)}</span>` : ''}<button class="x" data-act="closeprov">✕</button></div>`;
   // info
@@ -3618,7 +3675,7 @@ function renderProvPanel(force) {
   }
   // buildings
   h += `<div class="sec"><h4>Здания</h4><div class="bldgrid">`;
-  for (const b of BLD_ORDER) {
+  for (const b of BLD_ORDER.filter(b => b !== 'silo')) {
     if (b === 'naval' && !isCoastal(p)) continue;
     const lvl = pv.b[b], d = BLD[b];
     if (b === 'silo' && lvl === 0 && !(G.C[pv.o].techs.rockets >= 2)) continue;
@@ -3681,6 +3738,7 @@ function renderUnitPanel(force) {
   if (!ids.length) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   const us = ids.map(id => G.U.get(id));
+  if (G.opts.casual) { const html = quickUnitsHTML(us); if (UI._up !== html) { el.innerHTML = html; UI._up = html; } return; }
   const byT = {}; for (const u of us) (byT[u.t] = byT[u.t] || []).push(u);
   let h = `<div class="ph" style="position:static"><h3>Выбрано: ${us.length}<small>${locName(us[0].loc)}${us.some(u => u.loc !== us[0].loc) ? ' и др.' : ''}</small></h3><button class="x" data-act="desel">✕</button></div><div class="body">`;
   for (const t in byT) {
@@ -3701,7 +3759,7 @@ function renderUnitPanel(force) {
   if (hasLand && !hasTr) h += `<button class="btn" data-act="boardtr" data-tip="Погрузиться на транспорт в этой провинции">🚢 На борт</button>`;
   const upg = us.filter(u => canUpgrade(u)); if (upg.length) { const tot = {}; for (const u of upg) { const cc = upgradeCost(u); for (const k in cc) tot[k] = (tot[k] || 0) + cc[k]; } h += `<button class="btn" data-act="upgrade" data-tip="Модернизировать ${upg.length} юн. до текущего поколения<br>${costText(tot)}">⬆ Модернизация (${upg.length})</button>`; }
   h += `</div>`;
-  h += unitExtras(us);
+  if (!G.opts.casual) h += unitExtras(us);
   if (UI._up !== h) { el.innerHTML = h; UI._up = h; }
 }
 function stName(g) {
@@ -3799,7 +3857,7 @@ function renderModal(keepScroll) {
     case 'tutorial': body = tutorialHTML(); break;
   }
   let h = `<div class="mh"><h2>${TITLES[m]}</h2><button class="btn" data-act="closemodal">✕ Закрыть</button></div>`;
-  if (TABS[m] && G) h += `<div class="tabs">${TABS[m].map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
+  if (TABS[m] && G) h += `<div class="tabs">${TABS[m].filter(([k]) => !G?.opts.casual || (m === 'command' ? ['guide', 'settings', 'changes'].includes(k) : m === 'army' ? ['units', 'prod'].includes(k) : true)).map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
   h += `<div class="mb scroll">${body}</div>`;
   if (m === 'diplomacy') { const l = box.querySelector('#dlist'); UI._dlistScroll = l ? l.scrollTop : UI._dlistScroll; }
   box.innerHTML = h;
@@ -3809,6 +3867,7 @@ function renderModal(keepScroll) {
 
 /* ---------- overview ---------- */
 function overviewHTML(tab) {
+  if (G.opts.casual && tab === 'country') return quickOverviewHTML();
   const C = G.C[G.player];
   if (tab === 'country') {
     let units = 0, byDom = { land: 0, air: 0, sea: 0, msl: 0 };
@@ -3929,7 +3988,7 @@ function diplHTML() {
   if (me.alliance >= 0 && c.alliance !== me.alliance && !war) h += `<button class="btn" data-act="dinvite">🛡 Пригласить в альянс</button>`;
   if (me.alliance < 0 && c.alliance >= 0 && !war) h += `<button class="btn" data-act="djoin" data-tip="Проситься в альянс этой страны">🛡 Вступить в их альянс</button>`;
   h += `</div>`;
-  if (!war) h += `<div class="row" style="margin-top:10px;flex-wrap:wrap"><span>🎁 Подарок:</span><select id="giftres">${['cash', 'food', 'supp', 'fuel', 'comp', 'elec', 'rare'].map(k => `<option value="${k}">${RES_INFO[k].n}</option>`).join('')}</select><input type="number" id="giftqty" value="100" min="1" style="width:90px"><button class="btn" data-act="dgift">Отправить (+отношения)</button></div>`;
+  if (!war && !G.opts.casual) h += `<div class="row" style="margin-top:10px;flex-wrap:wrap"><span>🎁 Подарок:</span><select id="giftres">${['cash', 'food', 'supp', 'fuel', 'comp', 'elec', 'rare'].map(k => `<option value="${k}">${RES_INFO[k].n}</option>`).join('')}</select><input type="number" id="giftqty" value="100" min="1" style="width:90px"><button class="btn" data-act="dgift">Отправить (+отношения)</button></div>`;
   h += `<div id="dmsg" class="note" style="margin-top:10px;min-height:18px">${UI.dmsg || ''}</div></div>`;
   h += extraDiplomacyHTML(c);
   return h + '</div></div>';
@@ -3977,6 +4036,7 @@ function helpHTML() {
 }
 
 function tutorialHTML() {
+  if (G.opts.casual) return '<h3>Стройте, двигайтесь, захватывайте!</h3><p>Выберите свои войска и укажите цель правой кнопкой мыши. На телефоне удерживайте палец на цели. В своей провинции заказывайте подкрепления.</p><p>Деньги и материалы нужны для строительства и армии. Топливо и снабжение обслуживаются автоматически. Ракет нет.</p><button class="btn pri" data-act="tutgo">Поехали!</button>';
   const c = G.C[G.player];
   return `<div style="line-height:1.55"><p>Вы командуете государством <b>${esc(c.n)}</b>. Мир на грани Третьей мировой войны. Цель — набрать <b>${Math.round(G.opts.win * 100)}%</b> победных очков ★ вместе с союзниками.</p>
   <ol style="padding-left:20px;margin:6px 0">
@@ -3995,6 +4055,7 @@ function unitTableHTML() {
 /* ---------- menu & layers ---------- */
 function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m' + n) || 'null'); return m; } catch (e) { return null; } }
 function menuHTML() {
+  if (G.opts.casual) return quickMenuHTML();
   let h = `<div style="display:flex;flex-direction:column;gap:8px"><button class="btn pri" data-act="closemodal">▶ Продолжить</button>`;
   for (const n of [1, 2, 3]) { const m = slotInfo(n); h += `<div class="row"><button class="btn" style="flex:1" data-act="save" data-n="${n}">💾 Сохранить в слот ${n}</button><button class="btn" style="flex:1" data-act="loadslot" data-n="${n}" ${m ? '' : 'disabled'}>📂 ${m ? esc(m.t) : 'пусто'}</button></div>`; }
   h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${G.autoBuy === false ? '' : 'checked'} data-act="optauto"> Авто-закупка дефицита</label><label><input type="checkbox" ${UI.autoPause === false ? '' : 'checked'} data-act="optap"> Автопауза при нападении</label><label><input type="checkbox" ${G.autoDef === false ? '' : 'checked'} data-act="optdef"> Авто-оборона</label><label><input type="checkbox" ${UI.tut >= 0 ? 'checked' : ''} data-act="opttut"> Обучение</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
@@ -4059,7 +4120,7 @@ window.actModal = function (a, d, el, e) {
 
 'use strict';
 /* ===== Start screen, game loop, boot ===== */
-UI.start = { c: -1, scenario: 'cold', diff: 'easy', win: 40, doc: 'auto' };
+UI.start = { c: -1, scenario: 'cold', diff: 'easy', win: 25, doc: 'auto' };
 let loopLast = 0, acc = 0, lastAutoHour = 0, overShown = false;
 
 function importance(c) { return c.mil * 3 + Math.log10(c.gdp + 10) * 2 + (c.nukes ? 6 : 0); }
@@ -4067,6 +4128,7 @@ const FEATURED = ['US1', 'CH1', 'RUS', 'DEU', 'GB1', 'FR1', 'IND', 'TUR', 'JPN',
 function diffRating(c) { const s = importance(c); return s > 40 ? ['Лёгкая', 1] : s > 26 ? ['Средняя', 2] : s > 16 ? ['Сложная', 3] : ['Экстремальная', 4]; }
 
 function showStart() {
+  document.body.classList.remove('quick-game');
   G = null; window.G_ = null; MV.sel = null; MV.mode = 'political'; MV.hoverP = -1; miniDirty = true; MV.fxs = [];
   $('hud').classList.add('hidden'); $('modal-back').classList.add('hidden'); $('start').classList.remove('hidden');
   $('mini-wrap').style.display = 'none';
@@ -4086,7 +4148,7 @@ function showStart() {
     <div class="cardc" id="ccard"><div class="note">Выберите страну в списке или кликом по карте.</div></div>
   </div>
   <div class="str">
-    <h3 style="margin:0">Сценарий</h3>
+    <h3>Выберите страну — и вперёд!</h3><p class="note">Быстрые подкрепления, простая экономика, никаких ракет.</p><details class="quick-start-more"><summary>Другой сценарий и дополнительные настройки</summary><h3 style="margin:0">Сценарий</h3>
     <div class="opt" id="o-sc" style="flex-direction:column">${Object.entries(SCENARIOS).map(([k, s]) => `<button class="btn ${UI.start.scenario === k ? 'on' : ''}" style="text-align:left" data-act="opt" data-g="scenario" data-v="${k}"><b>${s.n}</b><br><small>${s.d}</small></button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Сложность ИИ <small class="note">(новичку — «Лёгкая»)</small></h3>
     <div class="opt">${Object.entries(DIFF).map(([k, s]) => `<button class="btn ${UI.start.diff === k ? 'on' : ''}" data-act="opt" data-g="diff" data-v="${k}">${s.n}</button>`).join('')}</div>
@@ -4094,8 +4156,8 @@ function showStart() {
     <div class="opt">${[['auto', 'Авто'], ...Object.entries(DOCS).map(([k, v]) => [k, v.n])].map(([k, n]) => `<button class="btn ${UI.start.doc === k ? 'on' : ''}" data-act="opt" data-g="doc" data-v="${k}" data-tip="${k === 'auto' ? 'По блоку страны' : DOCS[k].d}">${n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Победа: <span id="winv">${UI.start.win}</span>% победных очков</h3>
     <input type="range" min="25" max="80" value="${UI.start.win}" oninput="UI.start.win=+this.value;$('winv').textContent=this.value">
-    <details class="cx-start-options"><summary>Настройки партии и наблюдатель</summary><div class="cx-fields"><label>Seed мира <input id="cx-seed" type="number" min="1" max="2147483647" placeholder="Случайный"></label><label>Начальные запасы <select id="cx-stock"><option value="1">Обычные</option><option value="2">Двойные</option><option value="0.5">Половина</option></select></label><label>Агрессия ИИ <select id="cx-aggression"><option value="1">Обычная</option><option value="0.5">Низкая</option><option value="1.5">Повышенная</option></select></label><label><input id="cx-supply" type="checkbox" checked> Снабжение</label><label><input id="cx-observer" type="checkbox"> Наблюдать за ИИ</label></div></details><div class="row">${cxButton('import', '📂 Импорт сохранения')}${cxButton('settings', '⚙ Настройки')}</div><small>v${GAME_VERSION}</small>
-    <button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
+    <details class="cx-start-options"><summary>Настройки партии и наблюдатель</summary><div class="cx-fields"><label>Seed мира <input id="cx-seed" type="number" min="1" max="2147483647" placeholder="Случайный"></label><label>Начальные запасы <select id="cx-stock"><option value="1">Обычные</option><option value="2">Двойные</option><option value="0.5">Половина</option></select></label><label>Агрессия ИИ <select id="cx-aggression"><option value="1">Обычная</option><option value="0.5">Низкая</option><option value="1.5">Повышенная</option></select></label><label><input id="cx-full" type="checkbox"> Расширенная игра (сложнее)</label><label><input id="cx-supply" type="checkbox" checked> Снабжение</label><label><input id="cx-observer" type="checkbox"> Наблюдать за ИИ</label></div></details><div class="row">${cxButton('import', '📂 Импорт сохранения')}${cxButton('settings', '⚙ Настройки')}</div><small>v${GAME_VERSION}</small>
+    </details><button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
     ${hasAuto ? '<button class="btn" data-act="loadauto">📂 Продолжить с автосохранения</button>' : ''}${[1, 2, 3].map(n => { const mi = slotInfo(n); return mi ? `<button class="btn" data-act="loadstart" data-n="${n}">📂 Слот ${n}: ${esc(mi.t)}</button>` : ''; }).join('')}
     <div class="note">Управление: ЛКМ — выбор, ПКМ — приказ, колесо — масштаб, Пробел — пауза. На телефоне: щипок, долгое нажатие — приказ.</div>
   </div>`;
@@ -4121,7 +4183,7 @@ window.startSelect = function (ci) {
   const inc = Math.round(0.9 * Math.pow(Math.max(c.gdp, 300) / 1000, 0.78) * 1.15);
   card.innerHTML = `<div class="row">${flagImg(ci, 'lg')}<div style="flex:1"><b style="font-size:19px">${esc(c.n)}</b><div class="note">${GOV[c.gov]} · столица: ${esc(PROV[c.cap].name)}</div></div></div>
   <div class="grid2" style="margin-top:8px"><div class="kv"><span>Население</span><span>${fmtPop(c.pop)}</span></div><div class="kv"><span>Провинций</span><span>${c.provs.length}</span></div><div class="kv"><span>Доход</span><span>≈ ${fmt(inc)}/сут</span></div><div class="kv"><span>Альянс</span><span>${esc(al)}</span></div>
-  <div class="kv"><span>Армия</span><span class="stars">${'★'.repeat(Math.round(c.mil / 2))}</span></div><div class="kv"><span>Технологии</span><span class="stars">${'★'.repeat(c.tech)}</span></div><div class="kv"><span>Ядерное оружие</span><span>${c.nukes ? '☢ есть' : 'нет'}</span></div><div class="kv"><span>Сложность</span><span style="color:${['#5fd35f', '#e6c34a', '#e0803c', '#e0503c'][dl - 1]}">${dn}</span></div></div>
+  <div class="kv"><span>Армия</span><span class="stars">${'★'.repeat(Math.round(c.mil / 2))}</span></div><div class="kv"><span>Технологии</span><span class="stars">${'★'.repeat(c.tech)}</span></div><div class="kv"><span>Сложность</span><span style="color:${['#5fd35f', '#e6c34a', '#e0803c', '#e0503c'][dl - 1]}">${dn}</span></div></div>
   <div class="note" style="margin-top:6px">Соседи: ${[...nb].slice(0, 8).map(esc).join(', ') || 'нет (остров)'}</div>`;
   const b = $('gobtn'); if (b) b.disabled = false;
 };
@@ -4136,7 +4198,7 @@ const _act = act; act = function (a, d, el, e) { if (['opt', 'startselect', 'sta
 
 function startNew() {
   const o = UI.start;
-  const extra = { seed: +$('cx-seed').value || undefined, stock: +$('cx-stock').value, aiAggression: +$('cx-aggression').value, supply: $('cx-supply').checked, observer: $('cx-observer').checked };
+  const extra = { casual: !$('cx-full').checked, seed: +$('cx-seed').value || undefined, stock: +$('cx-stock').value, aiAggression: +$('cx-aggression').value, supply: $('cx-supply').checked, observer: $('cx-observer').checked };
   $('gobtn').disabled = true; $('gobtn').textContent = 'Загрузка мира…';
   setTimeout(() => {
     newGame({ ...extra, player: o.c, scenario: o.scenario, diff: o.diff, win: o.win / 100, doc: o.doc === 'auto' ? undefined : o.doc });
@@ -4151,7 +4213,7 @@ function afterNew() {
   buildHUD(); closeModalSilently();
   const c = G.C[G.player]; focusLoc(c.cap, 3.4); selectProv(c.cap);
   refreshHUD(true);
-  UI.tut = UI.tutOff ? -1 : 0;
+  UI.tut = G.opts.casual || UI.tutOff ? -1 : 0;
   campaignToolbar();
   if (G.opts.observer) { UI.tut = -1; UI.autoPause = false; } else openModal('tutorial');
 }
@@ -4229,6 +4291,7 @@ function cxButton(action, label, attrs) { return `<button class="btn" data-act="
 function campaignToolbar() {
   let bar = $('campaign-bar');
   if (!bar) { bar = document.createElement('div'); bar.id = 'campaign-bar'; $('hud').appendChild(bar); }
+  if (G?.opts.casual) { bar.innerHTML = cxButton('search', '🔎 Найти город') + `<span class="cx-version">Быстрая игра · v${GAME_VERSION}</span>`; return; }
   bar.innerHTML = `${cxButton('advisor', '💡 Что делать дальше?')}${cxButton('search', '🔎 Поиск')}${cxButton('settings', '⚙ Настройки')}<span class="cx-version">v${GAME_VERSION}${G?.opts.observer ? ' · НАБЛЮДАТЕЛЬ' : ''}</span>`;
 }
 function adviceItems() {
@@ -4287,6 +4350,7 @@ function treatiesHTML() {
   return h;
 }
 function extraDiplomacyHTML(c) {
+  if (G.opts.casual) return '';
   const me = G.player, war = atWar(me, c.id), pact = pactBetween(me, c.id);
   let h = `<section class="cx-card"><h3>Переговоры и договоры</h3><p>Лидер: ${personality(c).n} · репутация ${Math.round(c.reputation)}/100</p><div class="row">`;
   if (war) {
@@ -4353,6 +4417,7 @@ function guideHTML() {
 function guideResults(q) { return GUIDE.filter(([n, d]) => (n + ' ' + d).toLocaleLowerCase('ru').includes(q)).map(([n, d]) => `<details class="cx-definition" ${q ? 'open' : ''}><summary>${esc(n)}</summary><p>${esc(d)}</p></details>`).join('') || '<p>Ничего не найдено.</p>'; }
 function renderGuideResults() { const el = $('cx-guide-results'); if (el) el.innerHTML = guideResults((UI.guideQuery || '').toLocaleLowerCase('ru')); }
 function preferencesHTML() {
+  if (G?.opts.casual) return quickPreferencesHTML();
   const checks = [['simple', 'Простой интерфейс'], ['contrast', 'Контрастная палитра и контуры'], ['reduced', 'Уменьшить анимацию'], ['lowPower', 'Экономить ресурсы устройства'], ['routes', 'Все мои маршруты'], ['fronts', 'Подсветка фронтов'], ['ranges', 'Радиусы выбранной авиации и ракет'], ['weather', 'Значки погоды'], ['waves', 'Волны на море'], ['clouds', 'Облака в непогоду'], ['roads', 'Линии инфраструктуры'], ['lights', 'Огни городов ночью'], ['effects', 'Дым и последствия боёв'], ['music', 'Тихая процедурная музыка']];
   return `<div class="cx-fields"><label>Оформление <select data-cx-pref="theme">${[['dark', 'Тёмное'], ['light', 'Светлое'], ['military', 'Военное']].map(([k, n]) => `<option value="${k}" ${PREF.theme === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label><label>Размер текста <input type="number" data-cx-pref="font" min="12" max="20" value="${PREF.font}"></label><label>Громкость <input type="range" data-cx-pref="volume" min="0" max="1" step="0.05" value="${PREF.volume}"></label>${checks.map(([k, n]) => `<label><input type="checkbox" data-cx-pref="${k}" ${PREF[k] ? 'checked' : ''}> ${n}</label>`).join('')}</div><p class="note">Экономичный режим ограничивает отрисовку 30 кадрами/с и плотность пикселей. Настройки сохраняются в этом браузере. Музыка включается после первого нажатия и не скачивает файлы.</p><h3>Горячие клавиши</h3><div class="cx-fields">${Object.entries(KEY_NAMES).map(([k, n]) => `<label>${n}<input type="text" maxlength="1" data-cx-key="${k}" value="${PREF.keys[k] === 'Space' ? ' ' : PREF.keys[k] === 'Slash' ? '/' : PREF.keys[k].replace('Key', '')}" aria-label="${n}"></label>`).join('')}</div>${cxButton('reset-keys', 'Сбросить клавиши')}<p class="note">Клавиши 1–5: скорость; стрелки/WASD: карта; +/−: масштаб; Esc: закрыть. Они зарезервированы. Используется физическая клавиша, поэтому русская раскладка поддерживается.</p><h3>Перенос сохранений</h3><div class="row">${G ? cxButton('export', '💾 Скачать сохранение') : ''}${cxButton('import', '📂 Открыть файл сохранения')}</div><p class="note">Облачная синхронизация не подключена. Храните скачанный файл для переноса между устройствами.</p>`;
 }
@@ -4370,6 +4435,7 @@ const CHANGELOG = [
 ];
 function commandHTML(tab) {
   if (!G) return preferencesHTML();
+  if (G.opts.casual) { if (tab === 'settings') return quickPreferencesHTML(); if (tab === 'guide') return quickGuideHTML(); if (tab === 'changes') return '<h3>Версия 0.4.0</h3><p>Меньше меню, три ресурса, быстрое производство и движение. Ракетное оружие удалено у всех стран.</p>'; return quickOverviewHTML(); }
   const renderers = { advisor: advisorHTML, budget: budgetHTML, forces: forcesHTML, treaties: treatiesHTML, reports: reportsHTML, decisions: decisionsHTML, history: journalHTML, achievements: achievementsHTML, guide: guideHTML, settings: preferencesHTML, changes: () => `<h3>Версия ${GAME_VERSION}</h3><ul>${CHANGELOG.map(t => `<li>${t}</li>`).join('')}</ul><p class="note">Онлайн-мультиплеер, облачные сохранения и общая таблица рекордов требуют сервера и здесь пока не доступны.</p>` };
   return (renderers[tab] || advisorHTML)();
 }
@@ -4523,6 +4589,8 @@ document.addEventListener('change', e => {
 });
 function campaignRefresh() {
   if (!G?.campaign) return;
+  document.body.classList.toggle('quick-game', !!G.opts.casual);
+  if (G.opts.casual) return;
   if (G.opts.observer) { G.fogOff = true; UI.autoPause = false; }
   const C = G.C[G.player], chips = document.querySelectorAll('#tb-res .rchip');
   for (const [i, k] of [...RES, 'man'].entries()) {
@@ -4545,7 +4613,7 @@ function unitExtras(us) {
 }
 /* Draw only information available to the player, and cap decorative work on phones. */
 function drawCampaignOverlay() {
-  if (!G?.campaign) return;
+  if (!G?.campaign || G.opts.casual) return;
   const ctx = MV.ctx, z = MV.cam.z;
   ctx.save(); ctx.setTransform(MV.dpr, 0, 0, MV.dpr, 0, 0); ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
   const visible = p => G.fogOff || G.vis[p];
@@ -4607,6 +4675,58 @@ document.addEventListener('keydown', e => {
   if (!focusable.includes(active) || e.shiftKey && active === first) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
   else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
 }, true);
+
+'use strict';
+function quickUnitsHTML(us) {
+  const land = us.some(u => ['land', 'sea'].includes(UNITS[u.t].dom)), air = us.some(u => UNITS[u.t].dom === 'air'), transport = us.some(u => u.t === 'transport');
+  return `<div class="ph"><h3>🪖 Выбрано: ${us.length}<small>Прочность: ${Math.round(us.reduce((s, u) => s + u.hp, 0) / us.length)}%</small></h3><button class="x" data-act="desel">✕</button></div><div class="acts">${land ? '<button class="btn pri" data-act="mode" data-m="move">➜ Идти / атаковать</button><button class="btn" data-act="stop">Стоп</button>' : ''}${air ? '<button class="btn pri" data-act="mode" data-m="strike">💥 Удар</button><button class="btn" data-act="recall">↩ На базу</button>' : ''}${transport ? '<button class="btn" data-act="loadtr">Погрузить</button><button class="btn" data-act="unloadtr">Высадить</button>' : ''}</div>`;
+}
+function quickProvinceHTML(p) {
+  const pv = G.pv[p], mine = pv.o === G.player;
+  let h = `<div class="ph"><h3>${esc(PROV[p].name)}<small>${esc(G.C[pv.o].n)} · ★ ${PROV[p].vp}</small></h3><button class="x" data-act="closeprov">✕</button></div>`;
+  if (mine) {
+    h += '<div class="sec"><h4>Подкрепления</h4><div class="quick-recruits">';
+    for (const t of ['inf', 'tank', 'fighter', 'frigate']) if (UNITS[t].dom !== 'sea' || isCoastal(p)) h += quickRecruitButton(p, t);
+    h += '</div><details class="quick-extra-units"><summary>Другие войска</summary><div class="quick-recruits">' + ['recon','arty','bomber','transport'].filter(t => UNITS[t].dom !== 'sea' || isCoastal(p)).map(t => quickRecruitButton(p,t)).join('') + '</div></details>';
+    if (pv.q.length) h += `<h4>Готовятся</h4>${pv.q.map((q, i) => `<div class="q">${UNITS[q.t].n}<b>${Math.ceil(q.left)} ч</b><button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}" aria-label="Отменить заказ">✕</button></div>`).join('')}`;
+    h += '</div><div class="sec"><h4>Постройки</h4><div class="row quick-builds">';
+    for (const b of ['eco', 'barracks', 'factory', 'airfield', 'naval']) {
+      if (b === 'naval' && !isCoastal(p)) continue;
+      const err = canBuild(p, b);
+      h += `<button class="btn" data-act="build" data-p="${p}" data-b="${b}" ${err ? 'disabled' : ''} title="${esc(err || costText(bldCost(b, pv.b[b] + 1)).replace(/<br>/g, ' · '))}">${BLD[b].i} ${b === 'eco' ? 'Доход' : BLD[b].n} ${pv.b[b] || ''} ＋</button>`;
+    }
+    if (pv.bq) h += `<p>🏗 ${BLD[pv.bq.b].n} · ${Math.ceil(pv.bq.left)} ч</p>`;
+    h += '</div></div>';
+  } else h += `<div class="sec"><button class="btn" data-act="dipl" data-c="${pv.o}">🤝 Дипломатия</button>${atWar(G.player, pv.o) ? `<button class="btn pri" data-act="quick-attack" data-p="${p}">⚔ Атаковать выбранными</button>` : '<p class="note">Для захвата сначала объявите войну в дипломатии.</p>'}</div>`;
+  const own = unitsAt(p).filter(u => u.o === G.player);
+  if (own.length) h += `<div class="sec"><button class="btn pri" data-act="selall" data-p="${p}">🪖 Выбрать войска (${own.length})</button><p class="note">Правый клик по цели — идти или атаковать. На телефоне — удерживайте цель пальцем.</p></div>`;
+  if (pv.cap) h += `<div class="sec">⚔ Захват: ${Math.round(pv.cap.prog)}%</div>`;
+  return h;
+}
+function quickOverviewHTML() {
+  const c = G.C[G.player];
+  return `<h3>${flagImg(c.id)} ${esc(c.n)}</h3><div class="cx-grid">${card('Территория', `${c.provs.length} провинций · ${c.vp} победных очков`)}${card('Армия', `${unitsOf(c.id).length} частей`)}${card('Победа', `${Math.round(G.opts.win * 100)}% победных очков мира вместе с союзниками`)}</div><p>Стройте здания дохода, заказывайте подкрепления и захватывайте города со звёздами.</p>`;
+}
+function quickMenuHTML() {
+  return `<div class="quick-menu"><button class="btn pri" data-act="closemodal">▶ Играть</button><button class="btn" data-act="save" data-n="1">💾 Сохранить</button><button class="btn" data-act="loadslot" data-n="1" ${slotInfo(1) ? '' : 'disabled'}>📂 Загрузить</button>${cxButton('export', 'Скачать сохранение')}${cxButton('import', 'Открыть сохранение из файла')}${cxButton('settings', '⚙ Настройки')}<button class="btn danger" data-act="newgame">Новая игра</button><small>Быстрая игра · v${GAME_VERSION}</small></div>`;
+}
+function quickPreferencesHTML() {
+  return `<div class="cx-fields"><label><input type="checkbox" data-act="optsound" ${UI.sound ? 'checked' : ''}> Звук</label><label>Громкость <input type="range" data-cx-pref="volume" min="0" max="1" step="0.05" value="${PREF.volume}"></label><label>Размер текста <input type="number" data-cx-pref="font" min="12" max="20" value="${PREF.font}"></label><label><input type="checkbox" data-cx-pref="lowPower" ${PREF.lowPower ? 'checked' : ''}> Экономить батарею</label></div><p>Двигайте войска, захватывайте города и вызывайте подкрепления. Топливо, питание и снабжение обслуживаются автоматически.</p><p>Крылатые, баллистические и ядерные ракеты отключены для всех стран, включая ИИ.</p>`;
+}
+function quickGuideHTML() {
+  return '<h3>Три шага</h3><ol><li>В своей провинции закажите пехоту или технику. Деньги и материалы показаны сверху.</li><li>Выберите свой отряд. Правый клик по цели — приказ. На телефоне удерживайте цель пальцем.</li><li>Для захвата чужой страны сначала объявите войну в дипломатии. Города со звёздами приближают победу.</li></ol><p>Казармы открывают пехоту, завод — танки и артиллерию, аэродром — самолёты, порт — корабли. «Доход» увеличивает добычу.</p><p>Армия автоматически модернизируется каждую игровую неделю. Питание, топливо и снабжение не требуют ручного управления. Ракетного оружия нет.</p>';
+}
+document.addEventListener('click', e => {
+  const button = e.target.closest('[data-act="quick-attack"]');
+  if (!button || !G) return;
+  if (!SEL.units.size) { toast('Сначала выберите свои войска на карте'); return; }
+  issueOrder({ k: 'p', id: +button.dataset.p }, null);
+});
+
+function quickRecruitButton(p,t) {
+  const error=canQueue(p,t),cost=unitCostFor(G.player,t);
+  return `<button class="btn quick-recruit" data-act="queue" data-p="${p}" data-t="${t}" ${error?'disabled':''} title="${esc(error || 'Готово примерно через '+Math.round(UNITS[t].time*.4)+' ч')}">${unitIcon(t,'#fff',24)}<b>${UNITS[t].n}</b><small>${costHTMLplain(cost,unitMult(G.player))}${error?'<br>'+esc(error):''}</small></button>`;
+}
 
 </script>
 </body>

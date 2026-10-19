@@ -1,6 +1,6 @@
 'use strict';
 /* ===== Start screen, game loop, boot ===== */
-UI.start = { c: -1, scenario: 'cold', diff: 'easy', win: 40, doc: 'auto' };
+UI.start = { c: -1, scenario: 'cold', diff: 'easy', win: 25, doc: 'auto' };
 let loopLast = 0, acc = 0, lastAutoHour = 0, overShown = false;
 
 function importance(c) { return c.mil * 3 + Math.log10(c.gdp + 10) * 2 + (c.nukes ? 6 : 0); }
@@ -8,6 +8,7 @@ const FEATURED = ['US1', 'CH1', 'RUS', 'DEU', 'GB1', 'FR1', 'IND', 'TUR', 'JPN',
 function diffRating(c) { const s = importance(c); return s > 40 ? ['Лёгкая', 1] : s > 26 ? ['Средняя', 2] : s > 16 ? ['Сложная', 3] : ['Экстремальная', 4]; }
 
 function showStart() {
+  document.body.classList.remove('quick-game');
   G = null; window.G_ = null; MV.sel = null; MV.mode = 'political'; MV.hoverP = -1; miniDirty = true; MV.fxs = [];
   $('hud').classList.add('hidden'); $('modal-back').classList.add('hidden'); $('start').classList.remove('hidden');
   $('mini-wrap').style.display = 'none';
@@ -27,7 +28,7 @@ function showStart() {
     <div class="cardc" id="ccard"><div class="note">Выберите страну в списке или кликом по карте.</div></div>
   </div>
   <div class="str">
-    <h3 style="margin:0">Сценарий</h3>
+    <h3>Выберите страну — и вперёд!</h3><p class="note">Быстрые подкрепления, простая экономика, никаких ракет.</p><details class="quick-start-more"><summary>Другой сценарий и дополнительные настройки</summary><h3 style="margin:0">Сценарий</h3>
     <div class="opt" id="o-sc" style="flex-direction:column">${Object.entries(SCENARIOS).map(([k, s]) => `<button class="btn ${UI.start.scenario === k ? 'on' : ''}" style="text-align:left" data-act="opt" data-g="scenario" data-v="${k}"><b>${s.n}</b><br><small>${s.d}</small></button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Сложность ИИ <small class="note">(новичку — «Лёгкая»)</small></h3>
     <div class="opt">${Object.entries(DIFF).map(([k, s]) => `<button class="btn ${UI.start.diff === k ? 'on' : ''}" data-act="opt" data-g="diff" data-v="${k}">${s.n}</button>`).join('')}</div>
@@ -35,8 +36,8 @@ function showStart() {
     <div class="opt">${[['auto', 'Авто'], ...Object.entries(DOCS).map(([k, v]) => [k, v.n])].map(([k, n]) => `<button class="btn ${UI.start.doc === k ? 'on' : ''}" data-act="opt" data-g="doc" data-v="${k}" data-tip="${k === 'auto' ? 'По блоку страны' : DOCS[k].d}">${n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Победа: <span id="winv">${UI.start.win}</span>% победных очков</h3>
     <input type="range" min="25" max="80" value="${UI.start.win}" oninput="UI.start.win=+this.value;$('winv').textContent=this.value">
-    <details class="cx-start-options"><summary>Настройки партии и наблюдатель</summary><div class="cx-fields"><label>Seed мира <input id="cx-seed" type="number" min="1" max="2147483647" placeholder="Случайный"></label><label>Начальные запасы <select id="cx-stock"><option value="1">Обычные</option><option value="2">Двойные</option><option value="0.5">Половина</option></select></label><label>Агрессия ИИ <select id="cx-aggression"><option value="1">Обычная</option><option value="0.5">Низкая</option><option value="1.5">Повышенная</option></select></label><label><input id="cx-supply" type="checkbox" checked> Снабжение</label><label><input id="cx-observer" type="checkbox"> Наблюдать за ИИ</label></div></details><div class="row">${cxButton('import', '📂 Импорт сохранения')}${cxButton('settings', '⚙ Настройки')}</div><small>v${GAME_VERSION}</small>
-    <button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
+    <details class="cx-start-options"><summary>Настройки партии и наблюдатель</summary><div class="cx-fields"><label>Seed мира <input id="cx-seed" type="number" min="1" max="2147483647" placeholder="Случайный"></label><label>Начальные запасы <select id="cx-stock"><option value="1">Обычные</option><option value="2">Двойные</option><option value="0.5">Половина</option></select></label><label>Агрессия ИИ <select id="cx-aggression"><option value="1">Обычная</option><option value="0.5">Низкая</option><option value="1.5">Повышенная</option></select></label><label><input id="cx-full" type="checkbox"> Расширенная игра (сложнее)</label><label><input id="cx-supply" type="checkbox" checked> Снабжение</label><label><input id="cx-observer" type="checkbox"> Наблюдать за ИИ</label></div></details><div class="row">${cxButton('import', '📂 Импорт сохранения')}${cxButton('settings', '⚙ Настройки')}</div><small>v${GAME_VERSION}</small>
+    </details><button class="btn pri" id="gobtn" style="font-size:17px;padding:12px;margin-top:8px" data-act="startgo" disabled>▶ НАЧАТЬ ИГРУ</button>
     ${hasAuto ? '<button class="btn" data-act="loadauto">📂 Продолжить с автосохранения</button>' : ''}${[1, 2, 3].map(n => { const mi = slotInfo(n); return mi ? `<button class="btn" data-act="loadstart" data-n="${n}">📂 Слот ${n}: ${esc(mi.t)}</button>` : ''; }).join('')}
     <div class="note">Управление: ЛКМ — выбор, ПКМ — приказ, колесо — масштаб, Пробел — пауза. На телефоне: щипок, долгое нажатие — приказ.</div>
   </div>`;
@@ -62,7 +63,7 @@ window.startSelect = function (ci) {
   const inc = Math.round(0.9 * Math.pow(Math.max(c.gdp, 300) / 1000, 0.78) * 1.15);
   card.innerHTML = `<div class="row">${flagImg(ci, 'lg')}<div style="flex:1"><b style="font-size:19px">${esc(c.n)}</b><div class="note">${GOV[c.gov]} · столица: ${esc(PROV[c.cap].name)}</div></div></div>
   <div class="grid2" style="margin-top:8px"><div class="kv"><span>Население</span><span>${fmtPop(c.pop)}</span></div><div class="kv"><span>Провинций</span><span>${c.provs.length}</span></div><div class="kv"><span>Доход</span><span>≈ ${fmt(inc)}/сут</span></div><div class="kv"><span>Альянс</span><span>${esc(al)}</span></div>
-  <div class="kv"><span>Армия</span><span class="stars">${'★'.repeat(Math.round(c.mil / 2))}</span></div><div class="kv"><span>Технологии</span><span class="stars">${'★'.repeat(c.tech)}</span></div><div class="kv"><span>Ядерное оружие</span><span>${c.nukes ? '☢ есть' : 'нет'}</span></div><div class="kv"><span>Сложность</span><span style="color:${['#5fd35f', '#e6c34a', '#e0803c', '#e0503c'][dl - 1]}">${dn}</span></div></div>
+  <div class="kv"><span>Армия</span><span class="stars">${'★'.repeat(Math.round(c.mil / 2))}</span></div><div class="kv"><span>Технологии</span><span class="stars">${'★'.repeat(c.tech)}</span></div><div class="kv"><span>Сложность</span><span style="color:${['#5fd35f', '#e6c34a', '#e0803c', '#e0503c'][dl - 1]}">${dn}</span></div></div>
   <div class="note" style="margin-top:6px">Соседи: ${[...nb].slice(0, 8).map(esc).join(', ') || 'нет (остров)'}</div>`;
   const b = $('gobtn'); if (b) b.disabled = false;
 };
@@ -77,7 +78,7 @@ const _act = act; act = function (a, d, el, e) { if (['opt', 'startselect', 'sta
 
 function startNew() {
   const o = UI.start;
-  const extra = { seed: +$('cx-seed').value || undefined, stock: +$('cx-stock').value, aiAggression: +$('cx-aggression').value, supply: $('cx-supply').checked, observer: $('cx-observer').checked };
+  const extra = { casual: !$('cx-full').checked, seed: +$('cx-seed').value || undefined, stock: +$('cx-stock').value, aiAggression: +$('cx-aggression').value, supply: $('cx-supply').checked, observer: $('cx-observer').checked };
   $('gobtn').disabled = true; $('gobtn').textContent = 'Загрузка мира…';
   setTimeout(() => {
     newGame({ ...extra, player: o.c, scenario: o.scenario, diff: o.diff, win: o.win / 100, doc: o.doc === 'auto' ? undefined : o.doc });
@@ -92,7 +93,7 @@ function afterNew() {
   buildHUD(); closeModalSilently();
   const c = G.C[G.player]; focusLoc(c.cap, 3.4); selectProv(c.cap);
   refreshHUD(true);
-  UI.tut = UI.tutOff ? -1 : 0;
+  UI.tut = G.opts.casual || UI.tutOff ? -1 : 0;
   campaignToolbar();
   if (G.opts.observer) { UI.tut = -1; UI.autoPause = false; } else openModal('tutorial');
 }

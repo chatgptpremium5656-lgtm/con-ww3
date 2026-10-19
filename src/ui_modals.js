@@ -28,7 +28,7 @@ function renderModal(keepScroll) {
     case 'tutorial': body = tutorialHTML(); break;
   }
   let h = `<div class="mh"><h2>${TITLES[m]}</h2><button class="btn" data-act="closemodal">✕ Закрыть</button></div>`;
-  if (TABS[m] && G) h += `<div class="tabs">${TABS[m].map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
+  if (TABS[m] && G) h += `<div class="tabs">${TABS[m].filter(([k]) => !G?.opts.casual || (m === 'command' ? ['guide', 'settings', 'changes'].includes(k) : m === 'army' ? ['units', 'prod'].includes(k) : true)).map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-act="tab" data-m="${m}" data-t="${k}">${n}</button>`).join('')}</div>`;
   h += `<div class="mb scroll">${body}</div>`;
   if (m === 'diplomacy') { const l = box.querySelector('#dlist'); UI._dlistScroll = l ? l.scrollTop : UI._dlistScroll; }
   box.innerHTML = h;
@@ -38,6 +38,7 @@ function renderModal(keepScroll) {
 
 /* ---------- overview ---------- */
 function overviewHTML(tab) {
+  if (G.opts.casual && tab === 'country') return quickOverviewHTML();
   const C = G.C[G.player];
   if (tab === 'country') {
     let units = 0, byDom = { land: 0, air: 0, sea: 0, msl: 0 };
@@ -158,7 +159,7 @@ function diplHTML() {
   if (me.alliance >= 0 && c.alliance !== me.alliance && !war) h += `<button class="btn" data-act="dinvite">🛡 Пригласить в альянс</button>`;
   if (me.alliance < 0 && c.alliance >= 0 && !war) h += `<button class="btn" data-act="djoin" data-tip="Проситься в альянс этой страны">🛡 Вступить в их альянс</button>`;
   h += `</div>`;
-  if (!war) h += `<div class="row" style="margin-top:10px;flex-wrap:wrap"><span>🎁 Подарок:</span><select id="giftres">${['cash', 'food', 'supp', 'fuel', 'comp', 'elec', 'rare'].map(k => `<option value="${k}">${RES_INFO[k].n}</option>`).join('')}</select><input type="number" id="giftqty" value="100" min="1" style="width:90px"><button class="btn" data-act="dgift">Отправить (+отношения)</button></div>`;
+  if (!war && !G.opts.casual) h += `<div class="row" style="margin-top:10px;flex-wrap:wrap"><span>🎁 Подарок:</span><select id="giftres">${['cash', 'food', 'supp', 'fuel', 'comp', 'elec', 'rare'].map(k => `<option value="${k}">${RES_INFO[k].n}</option>`).join('')}</select><input type="number" id="giftqty" value="100" min="1" style="width:90px"><button class="btn" data-act="dgift">Отправить (+отношения)</button></div>`;
   h += `<div id="dmsg" class="note" style="margin-top:10px;min-height:18px">${UI.dmsg || ''}</div></div>`;
   h += extraDiplomacyHTML(c);
   return h + '</div></div>';
@@ -206,6 +207,7 @@ function helpHTML() {
 }
 
 function tutorialHTML() {
+  if (G.opts.casual) return '<h3>Стройте, двигайтесь, захватывайте!</h3><p>Выберите свои войска и укажите цель правой кнопкой мыши. На телефоне удерживайте палец на цели. В своей провинции заказывайте подкрепления.</p><p>Деньги и материалы нужны для строительства и армии. Топливо и снабжение обслуживаются автоматически. Ракет нет.</p><button class="btn pri" data-act="tutgo">Поехали!</button>';
   const c = G.C[G.player];
   return `<div style="line-height:1.55"><p>Вы командуете государством <b>${esc(c.n)}</b>. Мир на грани Третьей мировой войны. Цель — набрать <b>${Math.round(G.opts.win * 100)}%</b> победных очков ★ вместе с союзниками.</p>
   <ol style="padding-left:20px;margin:6px 0">
@@ -224,6 +226,7 @@ function unitTableHTML() {
 /* ---------- menu & layers ---------- */
 function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m' + n) || 'null'); return m; } catch (e) { return null; } }
 function menuHTML() {
+  if (G.opts.casual) return quickMenuHTML();
   let h = `<div style="display:flex;flex-direction:column;gap:8px"><button class="btn pri" data-act="closemodal">▶ Продолжить</button>`;
   for (const n of [1, 2, 3]) { const m = slotInfo(n); h += `<div class="row"><button class="btn" style="flex:1" data-act="save" data-n="${n}">💾 Сохранить в слот ${n}</button><button class="btn" style="flex:1" data-act="loadslot" data-n="${n}" ${m ? '' : 'disabled'}>📂 ${m ? esc(m.t) : 'пусто'}</button></div>`; }
   h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${G.autoBuy === false ? '' : 'checked'} data-act="optauto"> Авто-закупка дефицита</label><label><input type="checkbox" ${UI.autoPause === false ? '' : 'checked'} data-act="optap"> Автопауза при нападении</label><label><input type="checkbox" ${G.autoDef === false ? '' : 'checked'} data-act="optdef"> Авто-оборона</label><label><input type="checkbox" ${UI.tut >= 0 ? 'checked' : ''} data-act="opttut"> Обучение</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;

@@ -198,7 +198,7 @@ function drawBase() {
 function drawHL() {
   const ctx = MV.ctx, z = MV.cam.z, dpr = MV.dpr, px = 1 / z;
   ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (MV.W / 2 - MV.cam.cx * z), dpr * (MV.H / 2 - MV.cam.cy * z));
-  if (G && MV.daynight !== false) {
+  if (G && !G.opts.casual && MV.daynight !== false) {
     const sub = (12 - (G.hour % 24)) * 15, g = ctx.createLinearGradient(0, 0, WW, 0);
     for (let i = 0; i <= 48; i++) { const lon = -180 + i * 7.5; const d = Math.cos((lon - sub) * Math.PI / 180); g.addColorStop(i / 48, `rgba(2,6,30,${(0.36 * clamp((0.12 - d) / 1.05, 0, 1)).toFixed(3)})`); }
     ctx.fillStyle = g; ctx.fillRect(0, 0, WW, WH);

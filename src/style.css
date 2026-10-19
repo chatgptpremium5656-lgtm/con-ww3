@@ -221,3 +221,12 @@ body[data-theme=light] .btn.pri{background:#e6b85d;color:#201400}body[data-theme
 /* Keep the new toolbar clear of objectives, tutorials and the mobile rail. */
 #goals{top:92px}#tut{top:92px}
 @media(max-width:700px){#campaign-bar{left:48px;max-width:calc(100% - 56px)}#legend,#tut{top:138px}}
+.quick-game #goals,.quick-game #tut,.quick-game #legend{display:none!important}
+.quick-game #leftbar button{height:58px}.quick-game #campaign-bar{left:66px}
+.quick-game #tb-res .rchip{min-width:100px}.quick-game #unit-panel .acts{padding:12px;gap:8px}
+.quick-recruits{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick-recruit{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;min-height:85px}.quick-recruit small{font-size:11px;white-space:normal}
+.quick-builds{flex-wrap:wrap;gap:8px}.quick-menu{display:grid;gap:12px}.quick-menu .btn{min-height:40px}
+.quick-start-more>summary{padding:10px;cursor:pointer;color:var(--tx2)}
+.quick-game #prov-panel h4{font-size:14px}.quick-game #prov-panel .btn{min-height:38px}
+@media(max-width:700px){.quick-game #campaign-bar{left:48px}.quick-game #tb-res .rchip{min-width:85px}.quick-game #prov-panel .btn{min-height:44px}}
+.quick-recruit{min-height:72px;padding:8px}.quick-extra-units summary{cursor:pointer;color:var(--tx2);padding:12px 0}

@@ -1,5 +1,5 @@
 const fs=require('fs');const path=require('path');
-const files=['src/world.js','src/world_decode.js','src/data.js','src/engine_core.js','src/engine_sim.js','src/engine_dipl.js','src/ai.js','src/campaign.js'];
+const files=['src/world.js','src/world_decode.js','src/data.js','src/engine_core.js','src/engine_sim.js','src/engine_dipl.js','src/ai.js','src/campaign.js', 'src/quickplay.js'];
 let code=files.map(f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8')).join('\n');
 code+='\n;module.exports={get G(){return G},newGame,tick,cidx,PROV,UNITS,spawnUnit,orderAir,locName};';
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);

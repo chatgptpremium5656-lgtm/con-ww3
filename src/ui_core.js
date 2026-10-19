@@ -183,10 +183,10 @@ function updateSpeedBtns() {
 const LEFT = [['overview', '🌍', 'Обзор'], ['army', '🎖', 'Армия'], ['research', '🔬', 'Наука'], ['diplomacy', '🤝', 'Дипл.'], ['market', '💱', 'Рынок'], ['events', '📰', 'События'], ['help', '❓', 'Справка']];
 const MODES = [['political', '🏳', 'Политическая'], ['terrain', '⛰', 'Рельеф'], ['relations', '🤝', 'Отношения'], ['bloc', '🛡', 'Альянсы'], ['pop', '👥', 'Население'], ['power', '💥', 'Военная мощь'], ['res:fuel', '⛽', 'Нефть'], ['res:comp', '🔩', 'Металлы'], ['res:food', '🌾', 'Еда'], ['res:rare', '💎', 'Редкие'], ['res:supp', '🏭', 'Промышленность'], ['res:elec', '💻', 'Электроника']];
 function buildHUD() {
-  $('leftbar').innerHTML = LEFT.map(([m, i, t]) => `<button data-act="modal" data-m="${m}" data-tip="${t}" id="lb-${m}">${i}<span>${t}</span></button>`).join('');
+  $('leftbar').innerHTML = LEFT.filter(([m]) => !G.opts.casual || ['army', 'diplomacy', 'events'].includes(m)).map(([m, i, t]) => `<button data-act="modal" data-m="${m}" data-tip="${t}" id="lb-${m}">${i}<span>${t}</span></button>`).join('');
   $('tb-speed').innerHTML = `<button data-act="speed" data-v="0" data-tip="Пауза (Пробел)">⏸</button>` + [1, 2, 3, 4, 5].map(v => `<button data-act="speed" data-v="${v}" data-tip="Скорость ${v} (клавиша ${v})">${v === 1 ? '▶' : v + '×'}</button>`).join('');
   $('tb-right').innerHTML = `<button class="ibtn" data-act="modal" data-m="events" data-tip="Сообщения" id="bellb">🔔<span class="badge hidden" id="bell"></span></button><button class="ibtn" data-act="modal" data-m="menu" data-tip="Меню">☰</button>`;
-  $('mapmodes').innerHTML = MODES.slice(0, 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
+  $('mapmodes').innerHTML = MODES.slice(0, G.opts.casual ? 3 : 8).map(([m, i, t]) => `<button data-act="mapmode" data-m="${m}" data-tip="Слой: ${t}">${i}</button>`).join('') + `<button data-act="mapmodes" data-tip="Все слои карты">⋯</button>`;
   $('mini-wrap').style.display = 'block';
   updateSpeedBtns(); updateModeBtns(); campaignToolbar();
 }
@@ -213,8 +213,8 @@ function refreshHUD(force) {
   $('tb-country').innerHTML = `${flagImg(G.player, 'lg')}<div><b>${esc(C.n)}</b><small>${C.alliance >= 0 ? esc(G.al[C.alliance].n) : 'Без альянса'} · ★ ${C.vp}</small></div>`;
   $('tb-time').innerHTML = `<b>${dateStr(G.hour)}</b><br><small>${timeStr(G.hour)} · ${G.paused ? 'ПАУЗА' : 'x' + G.speed}</small>`;
   let h = '';
-  for (const k of [...RES, 'man']) {
-    const inc = k === 'man' ? C.manCap * 0.06 : (C.inc[k] || 0), use = k === 'man' ? 0 : (C.use[k] || 0), net = inc - use;
+  for (const k of (G.opts.casual ? ['cash', 'comp', 'man'] : [...RES, 'man'])) {
+    const inc = k === 'man' ? C.manCap * (G.opts.casual ? 0.18 : 0.06) : (C.inc[k] || 0), use = k === 'man' ? 0 : (C.use[k] || 0), net = inc - use;
     const cap = k === 'man' ? ' / ' + fmt(C.manCap) : '';
     const tip = `<b>${RES_INFO[k].n}</b><br>Доход: +${fmt(inc)}/сут<br>Расход: −${fmt(use)}/сут<br>Баланс: ${net >= 0 ? '+' : ''}${fmt(net)}/сут${k === 'man' ? '<br>Максимум: ' + fmt(C.manCap) : ''}${C.short[k] ? '<br><span style="color:#e0503c">ДЕФИЦИТ! Войска теряют боеспособность</span>' : ''}`;
     h += `<div class="rchip ${C.short[k] ? 'low' : ''}" data-act="modal" data-m="market" data-tip='${tip.replace(/'/g, '&#39;')}'><span style="font-size:16px">${RES_INFO[k].i}</span><div><div class="v">${fmt(C.res[k])}${cap ? '<small style="font-weight:400;color:#8fa6bd">' + cap + '</small>' : ''}</div><div class="d ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : ''}${fmt(net)}</div></div></div>`;
@@ -243,7 +243,7 @@ function refreshHUD(force) {
   { const done = G.goalsDone || []; const todo = GOALS.filter(g => !done.includes(g.id)).slice(0, 3);
     const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Рейтинг: ${rankOf(G.player)}-е место, ${fmt(scoreOf(G.player))} очков</div><div class="note">★ Победа: ${G.myVP || 0} / ${Math.ceil(G.totalVP * G.opts.win)} ПО (${Math.round((G.myVP || 0) / G.totalVP * 100)}% из ${Math.round(G.opts.win * 100)}%)</div>`;
     if (UI._goalsH !== html) { gp.innerHTML = html; UI._goalsH = html; } }
-  renderProvPanel(force); renderUnitPanel(force); updateTutorial(); campaignRefresh();
+  renderProvPanel(force); renderUnitPanel(force); if (!G.opts.casual) updateTutorial(); else $('tut').classList.add('hidden'); campaignRefresh();
   if (UI.modal && (!document.activeElement || !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) renderModal(true);
 }
 
@@ -289,6 +289,7 @@ function renderProvPanel(force) {
   const scrollTop = el.scrollTop;
   el.classList.remove('hidden');
   if (SEL.sea >= 0) { el.innerHTML = seaPanelHTML(SEL.sea); el.scrollTop = scrollTop; return; }
+  if (G.opts.casual) { el.innerHTML = quickProvinceHTML(SEL.prov); el.scrollTop = scrollTop; return; }
   const p = SEL.prov, pr = PROV[p], pv = G.pv[p], o = G.C[pv.o], me = pv.o === G.player;
   let h = `<div class="ph">${flagImg(pv.o, 'lg')}<h3>${esc(pr.name)}<small>${esc(o.n)}${G.C[pv.o].cap === p ? ' · ⭐ Столица' : ''} · ${TERRAIN[pr.terr].n}</small></h3>${pr.vp ? `<span data-tip="Победные очки: ${pr.vp}">${stars(pr.vp, 6)}</span>` : ''}<button class="x" data-act="closeprov">✕</button></div>`;
   // info
@@ -330,7 +331,7 @@ function renderProvPanel(force) {
   }
   // buildings
   h += `<div class="sec"><h4>Здания</h4><div class="bldgrid">`;
-  for (const b of BLD_ORDER) {
+  for (const b of BLD_ORDER.filter(b => b !== 'silo')) {
     if (b === 'naval' && !isCoastal(p)) continue;
     const lvl = pv.b[b], d = BLD[b];
     if (b === 'silo' && lvl === 0 && !(G.C[pv.o].techs.rockets >= 2)) continue;
@@ -393,6 +394,7 @@ function renderUnitPanel(force) {
   if (!ids.length) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   const us = ids.map(id => G.U.get(id));
+  if (G.opts.casual) { const html = quickUnitsHTML(us); if (UI._up !== html) { el.innerHTML = html; UI._up = html; } return; }
   const byT = {}; for (const u of us) (byT[u.t] = byT[u.t] || []).push(u);
   let h = `<div class="ph" style="position:static"><h3>Выбрано: ${us.length}<small>${locName(us[0].loc)}${us.some(u => u.loc !== us[0].loc) ? ' и др.' : ''}</small></h3><button class="x" data-act="desel">✕</button></div><div class="body">`;
   for (const t in byT) {
@@ -413,7 +415,7 @@ function renderUnitPanel(force) {
   if (hasLand && !hasTr) h += `<button class="btn" data-act="boardtr" data-tip="Погрузиться на транспорт в этой провинции">🚢 На борт</button>`;
   const upg = us.filter(u => canUpgrade(u)); if (upg.length) { const tot = {}; for (const u of upg) { const cc = upgradeCost(u); for (const k in cc) tot[k] = (tot[k] || 0) + cc[k]; } h += `<button class="btn" data-act="upgrade" data-tip="Модернизировать ${upg.length} юн. до текущего поколения<br>${costText(tot)}">⬆ Модернизация (${upg.length})</button>`; }
   h += `</div>`;
-  h += unitExtras(us);
+  if (!G.opts.casual) h += unitExtras(us);
   if (UI._up !== h) { el.innerHTML = h; UI._up = h; }
 }
 function stName(g) {

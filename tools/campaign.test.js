@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const E = require('./engine');
 function setup(opts = {}) {
-  E.newGame({ playerKey: 'POL', scenario: 'sandbox', diff: 'normal', seed: 42, ...opts });
+  E.newGame({ playerKey: 'POL', scenario: 'sandbox', diff: 'normal', casual: false, supply: true, seed: 42, ...opts });
   for (const c of E.G.C) c.ai = false;
   return E.G;
 }
@@ -161,4 +161,44 @@ test('corruption reduces current tax production without making an occupied econo
   const G = setup(), c = G.C[G.player];
   for (const p of c.provs) { G.pv[p].dmg = 100; G.pv[p].fall = 0.75; G.pv[p].corrupt = 48; G.pv[p].since = 0; }
   E.recalc(c); assert.ok(c.inc.cash >= 0); E.loadGame(E.saveGame()); assert.ok(E.G.C[E.G.player].inc.cash >= 0);
+});
+test('default quick play has cheaper units, fast recruitment and no supply management', () => {
+  E.newGame({ playerKey: 'POL', scenario: 'cold', diff: 'easy', seed: 7 });
+  const G = E.G, c = G.C[G.player], p = c.cap;
+  assert.equal(G.opts.casual, true); assert.equal(G.opts.supply, false);
+  assert.ok(E.unitCostFor(c.id, 'inf').c < E.UNITS.inf.cost.c);
+  assert.deepEqual(Object.keys(E.unitCostFor(c.id, 'tank')).sort(), ['c', 'm', 'p']);
+  assert.equal(E.queueUnit(p, 'inf'), ''); assert.ok(G.pv[p].q[0].total < E.UNITS.inf.time);
+  const count = G.U.size; for (let i = 0; i < 12; i++) E.tick(); assert.ok(G.U.size > count);
+  for (const key of ['food', 'supp', 'fuel']) { c.res[key] = 0; c.short[key] = true; }
+  E.tick(); for (const key of ['food', 'supp', 'fuel']) { assert.ok(c.res[key] > 0); assert.equal(c.short[key], false); }
+});
+test('missiles cannot be created, ordered, researched or fired in either game mode', () => {
+  for (const casual of [true, false]) {
+    setup({ casual }); const c = E.G.C[E.G.player], p = c.cap;
+    for (const t of ['cruise', 'btm', 'icbm']) {
+      assert.equal(E.spawnUnit(c.id, t, p), null); assert.ok(E.canQueue(p, t).includes('удалено'));
+    }
+    assert.equal(E.fireMissile([], p), 0);
+    assert.equal(E.researchOptions(c.id).some(o => ['cruise', 'btm', 'icbm', 'rockets', 'nuclear', 'abm'].includes(o.id)), false);
+    assert.equal([...E.G.U.values()].some(u => E.UNITS[u.t].dom === 'msl'), false);
+  }
+});
+test('version 0.3 saves lose missiles on the ground, in flight and in production', () => {
+  const files = ['world', 'world_decode', 'data', 'engine_core', 'engine_sim', 'engine_dipl', 'ai', 'campaign'];
+  const code = files.map(f => execFileSync('git', ['show', 'e228af1:src/' + f + '.js'], { encoding: 'utf8', maxBuffer: 8e6 })).join('\n');
+  const legacy = new Function(code + `
+    newGame({playerKey:'US1',scenario:'cold',diff:'easy',seed:7});
+    const p=G.C[G.player].cap, enemy=cidx.RUS;
+    const rocket=spawnUnit(G.player,'icbm',p);
+    G.war[G.player*NC+enemy]=G.war[enemy*NC+G.player]=1;
+    fireMissile([rocket.id],G.C[enemy].cap);
+    G.pv[p].q.push({t:'cruise',left:10,total:18,m:1});
+    return saveGame();`)();
+  assert.ok(JSON.parse(legacy).U.some(u => u.t === 'icbm' && u.st === 'out'));
+  E.loadGame(legacy);
+  assert.equal([...E.G.U.values()].some(u => E.UNITS[u.t].dom === 'msl'), false);
+  assert.equal(E.G.pv.some(p => p.q.some(q => E.UNITS[q.t].dom === 'msl')), false);
+  assert.equal(E.G.pv.some(p => p.b.silo > 0), false);
+  E.tick(); E.loadGame(E.saveGame());
 });
