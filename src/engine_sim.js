@@ -23,7 +23,7 @@ function tick() {
   for (const pv of G.pv) { if (pv.dmg > 0) pv.dmg = Math.max(0, pv.dmg - 0.03); if (pv.fall > 0) pv.fall = Math.max(0, pv.fall - 0.0008); }
   if (h % 6 === 0) { for (const c of G.C) if (c.alive) { if (c.dirty || h % 24 === 0) recalc(c); calcUse(c); } updateVis(); }
   if (h % 24 === 0) dayTick();
-  if (h % 6 === 0) checkGoals();
+  if (h % 6 === 0) { checkGoals(); if (G.autoDef !== false) autoDefend(); }
   // AI scheduling
   for (const c of G.C) {
     if (!c.alive || !c.ai) continue;
@@ -845,3 +845,17 @@ function speedUp(p, kind, idx) {
   const it = pv.q[idx || 0]; if (!it) return 'Нет заказа'; const cost = Math.ceil(it.left * 4); if (G.C[c].res.cash < cost) return 'Не хватает денег'; G.C[c].res.cash -= cost; it.left = 0.01; return '';
 }
 function speedCost(p, kind, idx) { const pv = G.pv[p]; if (kind === 'build') return pv.bq ? Math.ceil(pv.bq.left * 6) : 0; const it = pv.q[idx || 0]; return it ? Math.ceil(it.left * 4) : 0; }
+
+function autoDefend() {
+  const C = G.C[G.player]; if (!C.alive) return;
+  for (const p of C.provs) {
+    let enemy = 0, own = 0;
+    for (const id of G.at[p]) { const u = G.U.get(id); if (!u || UNITS[u.t].dom !== 'land' || u.st === 'cargo') continue; if (G.war[G.player * NC + u.o]) enemy++; else if (u.o === G.player) own++; }
+    if (!enemy || own >= enemy) continue;
+    const near = [];
+    for (const [, u] of G.U) { if (u.o !== G.player || UNITS[u.t].dom !== 'land' || u.st !== 'idle' || u.loc === p || u.loc >= P) continue; const d = dist(u.loc, p); if (d < 220) near.push([d, u]); }
+    near.sort((a, b) => a[0] - b[0]);
+    const send = near.slice(0, Math.max(2, enemy + 1)).map(x => x[1].id);
+    if (send.length) { const r = orderMove(send, p); if (r.n) note(G.player, 'unit', `🛡 Авто-оборона: ${r.n} юн. спешат в ${PROV[p].name}`, p); }
+  }
+}

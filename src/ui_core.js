@@ -110,7 +110,7 @@ function wireMap() {
   MV.onClick = (x, y, e) => {
     if (!G) { startMapClick(x, y); return; }
     const ch = chipAt(x, y);
-    if (UI.mode && !ch) { const [wx, wy] = s2w(x, y); const hit = pickAt(wx, wy); if (hit) issueOrder(hit, UI.mode); return; }
+    if (UI.mode) { const [wx, wy] = s2w(x, y); const hit = ch ? { k: ch.loc < P ? 'p' : 's', id: ch.loc < P ? ch.loc : ch.loc - P } : pickAt(wx, wy); if (hit) issueOrder(hit, UI.mode); return; }
     if (ch) {
       Snd.play('click');
       if (ch.o === G.player) { selectUnits(ch.ids, e && e.shiftKey); if (ch.loc < P) selectProv(ch.loc); else selectSea(ch.loc - P); }
@@ -238,6 +238,7 @@ function refreshHUD(force) {
         if (n.t === 'war') Snd.play('war'); else if (n.t === 'capture' || n.t === 'loss') Snd.play('alert'); else if (n.t === 'unit' || n.t === 'build' || n.t === 'research') Snd.play('ok');
         if (!UI.modal || UI.modal !== 'events') { UI.unseen++; }
       }
+      if (n.t === 'attack' && n.f === 'p' && UI.autoPause !== false && n.h - (UI._apH || -99) > 12) { UI._apH = n.h; G.paused = true; updateSpeedBtns(); toast('⏸ Автопауза: на вас напали! Отдайте приказы и нажмите ▶', 'war', n.l); }
       if (n.t === 'capture' || n.t === 'elim') miniDirty = true;
     }
   }
@@ -258,14 +259,14 @@ function weakestNeighbor() {
 }
 const TUT = [
   { t: 'Добро пожаловать, командир! Нажмите <b>▶ (или Пробел)</b>, чтобы запустить время. Игра идёт в реальном времени: 1 секунда ≈ несколько игровых часов.', hl: '#tb-speed [data-v="2"]', ok: () => !G.paused },
-  { t: 'Справа — панель вашей столицы. Постройте здание: нажмите <b>«＋»</b> рядом с «Инфраструктура» или «Казармы». Здания дают доход и открывают войска.', hl: '#prov-panel [data-act="build"]:not([disabled])', ok: C => (C.stats.built || 0) >= 1 },
+  { t: 'Справа — панель вашей столицы. Постройте здание: нажмите любую светящуюся кнопку <b>«＋»</b> (например у «Казармы» или «Ресурсного комплекса»). Здания дают доход и открывают войска. <i>Одна стройка за раз.</i>', hl: '#prov-panel [data-act="build"]:not([disabled])', ok: C => (C.stats.built || 0) >= 1 },
   { t: 'Закажите войска: в блоке «Производство» нажмите на <b>«Пехота»</b>. Ресурсы спишутся сразу, юнит появится по готовности (полоса ниже).', hl: '#prov-panel [data-act="queue"][data-t="inf"]:not([disabled]), #prov-panel [data-act="queue"]:not([disabled])', ok: C => (C.stats.queued || 0) >= 1 },
   { t: 'Ждём юнита. Ускорьте время кнопками <b>2×–5×</b> вверху или нажмите <b>⏩</b> у заказа (платное ускорение).', hl: '#prov-panel [data-act="speedup"], #tb-speed [data-v="4"]', ok: C => (C.stats.trained || 0) >= 1 },
   { t: 'Выберите войска: кликните по <b>значку на карте</b> или нажмите «Выбрать все мои войска здесь» в панели провинции.', hl: '#prov-panel [data-act="selall"]', ok: () => SEL.units.size > 0 },
   { t: 'Отдайте приказ: нажмите <b>«Идти»</b> внизу и кликните по соседней провинции — или просто <b>правой кнопкой мыши</b> по ней (на телефоне — долгое нажатие).', hl: '#unit-panel [data-act="mode"][data-m="move"]', ok: C => (C.stats.moved || 0) >= 1 },
   { t: 'Откройте <b>🔬 Наука</b> и начните любое исследование — оно улучшит ваши войска и экономику.', hl: '#lb-research', ok: C => (C.stats.researched || 0) >= 1 },
-  { t: 'Если красным мигает ресурс (🌾📦⛽) — не хватает. Игра <b>докупает дефицит автоматически</b>, а вручную можно в <b>💱 Рынке</b>. Откройте его.', hl: '#lb-market', ok: () => UI.seenMarket },
-  { t: () => `Пора воевать! Откройте <b>🤝 Дипломатия</b>, выберите страну (например, <b>${weakestNeighbor()}</b>) и нажмите «Объявить войну» (дважды — для подтверждения). Сначала накопите 10–20 юнитов!`, hl: '#lb-diplomacy', ok: C => (C.stats.wars || 0) >= 1 },
+  { t: 'Если красным мигает ресурс (🌾📦⛽) — не хватает. Игра <b>докупает дефицит сама</b>, а вручную можно в <b>💱 Рынке</b>. Откройте его — посмотрите цены.', hl: '#lb-market', ok: () => UI.seenMarket },
+  { t: () => `Пора воевать! Откройте <b>🤝 Дипломатия</b>, выберите страну (например, <b>${weakestNeighbor()}</b>) и нажмите «Объявить войну» (дважды — для подтверждения). Сначала убедитесь, что армия достаточно крупная (окно «Армия»), и сосредоточьте её у границы.`, hl: '#lb-diplomacy', ok: C => (C.stats.wars || 0) >= 1 },
   { t: 'Война! Выберите войска и отправьте их в <b>провинцию врага</b> (ПКМ). Когда защитники уничтожены, идёт <b>захват</b> — удерживайте провинцию, пока полоса дойдёт до 100%. Вокруг ⚔ — идёт бой.', hl: '', ok: C => (C.stats.taken || 0) >= 1 },
   { t: 'Отлично! Вы захватили провинцию. Дальше ориентируйтесь на <b>🎯 Цели</b> слева и на ★ победные очки. Обучение закончено — удачи!', hl: '', ok: () => UI._tutEnd && Date.now() - UI._tutEnd > 7000, end: true }
 ];
@@ -280,7 +281,7 @@ function updateTutorial() {
   const html = `<h5>🎓 Обучение · шаг ${UI.tut + 1} из ${TUT.length}</h5><p>${txt}</p><div class="row"><button class="btn sm" data-act="tutskip">Пропустить шаг ➜</button><button class="btn sm" data-act="tutoff">Выключить обучение</button></div>`;
   if (UI._tutH !== html) { el.innerHTML = html; UI._tutH = html; }
   el.classList.remove('hidden');
-  if (st.hl) { const t = document.querySelector(st.hl); if (t) t.classList.add('tuthl'); }
+  if (st.hl) { const t = document.querySelector(st.hl); if (t) { t.classList.add('tuthl'); if (UI._tutScrolled !== UI.tut) { UI._tutScrolled = UI.tut; try { t.scrollIntoView({ block: 'nearest' }); } catch (e) { } } } }
 }
 /* ---- province panel ---- */
 function unitsAt(loc) { const o = []; for (const id of G.at[loc]) { const u = G.U.get(id); if (u && u.st !== 'cargo' && isVisible(u)) o.push(u); } return o; }
@@ -300,6 +301,11 @@ function renderProvPanel(force) {
   h += `<div class="sec"><div class="grid2"><div class="kv"><span>Население</span><span>${fmtPop(pv.pop)}</span></div><div class="kv"><span>Рельеф</span><span>${TERRAIN[pr.terr].n} (×${TERRAIN[pr.terr].def})</span></div>`;
   h += `<div class="kv"><span>Повреждения</span><span>${Math.round(pv.dmg)}%</span></div><div class="kv"><span>Заражение</span><span>${Math.round(pv.fall * 100)}%</span></div></div>`;
   if (pv.cap) h += `<div class="note" style="margin-top:5px;color:#ff9a80">⚠ Захват: ${G.C[pv.cap.by].n} — ${Math.round(pv.cap.prog)}%</div>`;
+  if (!me && SEL.units.size && G.war[G.player * NC + pv.o]) {
+    let mine = 0, theirs = 0; for (const id of SEL.units) { const uu = G.U.get(id); if (uu && UNITS[uu.t].dom === 'land') mine += unitPower(uu); }
+    for (const uu of unitsAt(p)) if (UNITS[uu.t].dom === 'land' && G.war[G.player * NC + uu.o]) theirs += unitPower(uu) * TERRAIN[pr.terr].def * (1 + 0.12 * pv.b.fort);
+    h += `<div class="note" style="margin-top:6px">⚔ Ваша выбранная сила: <b>${Math.round(mine)}</b> · защита провинции: <b>${Math.round(theirs)}</b> ${theirs === 0 ? '— провинция не защищена, можно занимать' : mine > theirs * 1.3 ? '<span style="color:#5fd35f">— перевес, атакуйте</span>' : '<span style="color:#e0803c">— нужно больше войск (и держите их вместе)</span>'}</div>`;
+  }
   if (G.bat.has(p) && G.hour - G.bat.get(p) <= 2) {
     const sides = {}; for (const u of unitsAt(p)) { const d = UNITS[u.t]; if (d.dom === 'msl' || (u.st === 'base' && d.dom === 'air')) continue; const s = sides[u.o] = sides[u.o] || { n: 0, hp: 0 }; s.n++; s.hp += u.hp; }
     h += `<div class="note" style="margin-top:6px;color:#ff9a80">⚔ Идёт бой: ${Object.keys(sides).map(o => `${esc(G.C[o].n)} — ${sides[o].n} юн. (${Math.round(sides[o].hp / sides[o].n)}%)`).join(' vs ')}</div>`;
@@ -314,6 +320,19 @@ function renderProvPanel(force) {
   }
   h += `</div>`;
   { const my = G.spies.filter(s => s.o === G.player && s.loc === p); if (my.length) h += `<div class="note" style="margin-top:5px">🕵 Ваши агенты здесь: ${my.map(s => SPY[s.mission].i + (s.active ? '' : '…')).join(' ')}</div>`; if (me) h += `<div style="margin-top:5px"><button class="btn sm" data-act="spy" data-p="${p}" data-m="counter" data-tip="<b>Контрразведка</b><br>${SPY.counter.d}<br>💵${SPY.counter.cost}">🛡 Контрразведка</button></div>`; }
+  // units here
+  const us = unitsAt(p);
+  if (us.length) {
+    const grp = {}; for (const u of us) { const k = u.o + '|' + u.t; (grp[k] = grp[k] || []).push(u); }
+    h += `<div class="sec"><h4>Войска в провинции (${us.length})</h4><div class="ulist">`;
+    for (const k in grp) {
+      const g = grp[k], u0 = g[0], hp = g.reduce((a, u) => a + u.hp, 0) / g.length; const mine = u0.o === G.player; const sel = mine && g.every(u => SEL.units.has(u.id));
+      h += `<div class="uchip ${sel ? 'sel' : ''}" data-act="selunits" data-ids="${g.map(u => u.id).join(',')}" data-tip="<b>${UNITS[u0.t].n}</b> × ${g.length}<br>${esc(G.C[u0.o].n)} · пок. ${GEN_NAMES[u0.g]}<br>Прочность: ${Math.round(hp)}%">${unitIcon(u0.t, mine ? '#fff' : '#ff9a80', 20)} ${g.length > 1 ? '×' + g.length : ''}${flagImg(u0.o)}<span class="hp"><i style="width:${hp}%;background:${hp > 60 ? '#5fd35f' : hp > 30 ? '#e6c34a' : '#e0503c'}"></i></span></div>`;
+    }
+    h += `</div>`;
+    if (us.some(u => u.o === G.player)) h += `<div style="margin-top:6px"><button class="btn sm" data-act="selall" data-p="${p}">Выбрать все наземные и морские</button> <button class="btn sm" data-act="selair" data-p="${p}">✈ Авиация</button></div>`;
+    h += `</div>`;
+  }
   // buildings
   h += `<div class="sec"><h4>Здания</h4><div class="bldgrid">`;
   for (const b of BLD_ORDER) {
@@ -332,6 +351,7 @@ function renderProvPanel(force) {
     h += `<div class="bld" data-tip="<b>${d.n}</b><br>${d.d}"><div class="t">${d.i} <span>${d.n.length > 14 ? d.n.slice(0, 13) + '…' : d.n}</span></div><div class="pips">${pips}</div>${bq}${go}</div>`;
   }
   h += `</div>`;
+  if (me && pv.bq) h += `<div class="note" style="margin-top:5px">⏳ В провинции идёт одна стройка за раз — дождитесь или нажмите ⏩.</div>`;
   if (me && pv.bq) h += `<div class="q" style="margin-top:6px">🏗 ${BLD[pv.bq.b].n} → ур. ${pv.bq.lvl}<div class="bar"><i style="width:${Math.round((1 - pv.bq.left / pv.bq.total) * 100)}%"></i></div><span>${Math.ceil(pv.bq.left)} ч</span><button class="btn sm" data-act="speedup" data-k="build" data-p="${p}" data-tip="Ускорить за 💵${speedCost(p, 'build')}">⏩</button><button class="btn sm" data-act="cancelbuild" data-p="${p}">✕</button></div>`;
   h += `</div>`;
   // production
@@ -350,20 +370,8 @@ function renderProvPanel(force) {
       h += `</div>`;
     }
     if (!UNIT_ORDER.some(t => pv.b[UNITS[t].req[0]] > 0)) h += `<div class="note">Постройте Казармы, Завод, Аэродром или Базу ВМФ, чтобы производить войска.</div>`;
+    if (pv.q.length >= 5) h += `<div class="note" style="margin-top:5px">Очередь заполнена (5/5) — дождитесь выпуска.</div>`;
     if (pv.q.length) { h += `<div style="margin-top:6px">`; pv.q.forEach((it, i) => { h += `<div class="q">${unitIcon(it.t, '#fff', 18)}<span style="min-width:90px">${UNITS[it.t].n}</span><div class="bar"><i style="width:${Math.round((1 - it.left / it.total) * 100)}%"></i></div><span>${Math.ceil(it.left)}ч</span>${i === 0 ? `<button class="btn sm" data-act="speedup" data-k="q" data-p="${p}" data-tip="Ускорить за 💵${speedCost(p, 'q', 0)}">⏩</button>` : ''}<button class="btn sm" data-act="cancelq" data-p="${p}" data-i="${i}">✕</button></div>`; }); h += `</div>`; }
-    h += `</div>`;
-  }
-  // units here
-  const us = unitsAt(p);
-  if (us.length) {
-    const grp = {}; for (const u of us) { const k = u.o + '|' + u.t; (grp[k] = grp[k] || []).push(u); }
-    h += `<div class="sec"><h4>Войска в провинции (${us.length})</h4><div class="ulist">`;
-    for (const k in grp) {
-      const g = grp[k], u0 = g[0], hp = g.reduce((a, u) => a + u.hp, 0) / g.length; const mine = u0.o === G.player; const sel = mine && g.every(u => SEL.units.has(u.id));
-      h += `<div class="uchip ${sel ? 'sel' : ''}" data-act="selunits" data-ids="${g.map(u => u.id).join(',')}" data-tip="<b>${UNITS[u0.t].n}</b> × ${g.length}<br>${esc(G.C[u0.o].n)} · пок. ${GEN_NAMES[u0.g]}<br>Прочность: ${Math.round(hp)}%">${unitIcon(u0.t, mine ? '#fff' : '#ff9a80', 20)} ${g.length > 1 ? '×' + g.length : ''}${flagImg(u0.o)}<span class="hp"><i style="width:${hp}%;background:${hp > 60 ? '#5fd35f' : hp > 30 ? '#e6c34a' : '#e0503c'}"></i></span></div>`;
-    }
-    h += `</div>`;
-    if (us.some(u => u.o === G.player)) h += `<div style="margin-top:6px"><button class="btn sm" data-act="selall" data-p="${p}">Выбрать все мои войска здесь</button></div>`;
     h += `</div>`;
   }
   el.innerHTML = h; el.scrollTop = scrollTop;
@@ -443,7 +451,8 @@ function act(a, d, el, e) {
     case 'queue': { const err = queueUnit(+d.p, d.t); if (err) toast(err, 'war'); renderProvPanel(true); break; }
     case 'cancelq': cancelQueue(+d.p, +d.i); renderProvPanel(true); break;
     case 'selunits': selectUnits(d.ids.split(',').map(Number), e.shiftKey); renderProvPanel(true); break;
-    case 'selall': { const ids = unitsAt(+d.p).filter(u => u.o === G.player).map(u => u.id); selectUnits(ids, false); renderProvPanel(true); break; }
+    case 'selair': { const ids = unitsAt(+d.p).filter(u => u.o === G.player && UNITS[u.t].dom === 'air').map(u => u.id); selectUnits(ids, false); renderProvPanel(true); break; }
+    case 'selall': { const ids = unitsAt(+d.p).filter(u => u.o === G.player && (UNITS[u.t].dom === 'land' || UNITS[u.t].dom === 'sea')).map(u => u.id); selectUnits(ids, false); renderProvPanel(true); break; }
     case 'dipl': UI.dc = +d.c; openModal('diplomacy'); break;
     case 'mapmode': MV.mode = d.m; updateModeBtns(); MV.dirty = true; miniDirty = true; break;
     case 'mapmodes': openModal('layers'); break;

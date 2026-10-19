@@ -223,7 +223,7 @@ function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m
 function menuHTML() {
   let h = `<div style="display:flex;flex-direction:column;gap:8px"><button class="btn pri" data-act="closemodal">▶ Продолжить</button>`;
   for (const n of [1, 2, 3]) { const m = slotInfo(n); h += `<div class="row"><button class="btn" style="flex:1" data-act="save" data-n="${n}">💾 Сохранить в слот ${n}</button><button class="btn" style="flex:1" data-act="loadslot" data-n="${n}" ${m ? '' : 'disabled'}>📂 ${m ? esc(m.t) : 'пусто'}</button></div>`; }
-  h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${G.autoBuy === false ? '' : 'checked'} data-act="optauto"> Авто-закупка дефицита</label><label><input type="checkbox" ${UI.tut >= 0 ? 'checked' : ''} data-act="opttut"> Обучение</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
+  h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${G.autoBuy === false ? '' : 'checked'} data-act="optauto"> Авто-закупка дефицита</label><label><input type="checkbox" ${UI.autoPause === false ? '' : 'checked'} data-act="optap"> Автопауза при нападении</label><label><input type="checkbox" ${G.autoDef === false ? '' : 'checked'} data-act="optdef"> Авто-оборона</label><label><input type="checkbox" ${UI.tut >= 0 ? 'checked' : ''} data-act="opttut"> Обучение</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
   h += `<div class="row"><button class="btn danger" style="flex:1" data-act="newgame">⟲ Новая игра</button></div></div>`;
   return h;
 }
@@ -269,8 +269,10 @@ window.actModal = function (a, d, el, e) {
     case 'trade': { const err = trade(G.player, d.r, +d.q, d.b === '1'); if (err) toast(err, 'war'); else Snd.play('ok'); renderModal(true); break; }
     case 'save': doSave(+d.n); renderModal(true); break;
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;
-    case 'tutgo': closeModal(); G.paused = false; G.speed = 2; updateSpeedBtns(); break;
+    case 'tutgo': closeModal(); if (UI.tut < 0) { G.paused = false; G.speed = 2; } else G.speed = 2; updateSpeedBtns(); break;
     case 'optsound': UI.sound = el.checked; break;
+    case 'optap': UI.autoPause = el.checked; break;
+    case 'optdef': G.autoDef = el.checked; break;
     case 'optauto': G.autoBuy = el.checked; break;
     case 'opttut': UI.tutOff = !el.checked; UI.tut = el.checked ? 0 : -1; UI._tutH = ''; break;
     case 'optdn': MV.daynight = el.checked; MV.dirty = true; break;
