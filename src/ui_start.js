@@ -1,10 +1,10 @@
 'use strict';
 /* ===== Start screen, game loop, boot ===== */
-UI.start = { c: -1, scenario: 'eve', diff: 'normal', win: 55, doc: 'auto' };
+UI.start = { c: -1, scenario: 'cold', diff: 'easy', win: 40, doc: 'auto' };
 let loopLast = 0, acc = 0, lastAutoHour = 0, overShown = false;
 
 function importance(c) { return c.mil * 3 + Math.log10(c.gdp + 10) * 2 + (c.nukes ? 6 : 0); }
-const FEATURED = ['US1', 'RUS', 'CH1', 'DEU', 'GB1', 'FR1', 'IND', 'TUR', 'JPN', 'BRA', 'POL', 'IS1', 'IRN', 'KOR', 'UKR', 'SAU', 'PAK', 'EGY', 'ITA', 'ESP', 'AU1', 'CAN', 'PRK', 'TWN'];
+const FEATURED = ['US1', 'CH1', 'RUS', 'DEU', 'GB1', 'FR1', 'IND', 'TUR', 'JPN', 'BRA', 'POL', 'IS1', 'IRN', 'KOR', 'UKR', 'SAU', 'PAK', 'EGY', 'ITA', 'ESP', 'AU1', 'CAN', 'PRK', 'TWN'];
 function diffRating(c) { const s = importance(c); return s > 40 ? ['Лёгкая', 1] : s > 26 ? ['Средняя', 2] : s > 16 ? ['Сложная', 3] : ['Экстремальная', 4]; }
 
 function showStart() {
@@ -29,7 +29,7 @@ function showStart() {
   <div class="str">
     <h3 style="margin:0">Сценарий</h3>
     <div class="opt" id="o-sc" style="flex-direction:column">${Object.entries(SCENARIOS).map(([k, s]) => `<button class="btn ${UI.start.scenario === k ? 'on' : ''}" style="text-align:left" data-act="opt" data-g="scenario" data-v="${k}"><b>${s.n}</b><br><small>${s.d}</small></button>`).join('')}</div>
-    <h3 style="margin:6px 0 0">Сложность ИИ</h3>
+    <h3 style="margin:6px 0 0">Сложность ИИ <small class="note">(новичку — «Лёгкая»)</small></h3>
     <div class="opt">${Object.entries(DIFF).map(([k, s]) => `<button class="btn ${UI.start.diff === k ? 'on' : ''}" data-act="opt" data-g="diff" data-v="${k}">${s.n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 0">Доктрина</h3>
     <div class="opt">${[['auto', 'Авто'], ...Object.entries(DOCS).map(([k, v]) => [k, v.n])].map(([k, n]) => `<button class="btn ${UI.start.doc === k ? 'on' : ''}" data-act="opt" data-g="doc" data-v="${k}" data-tip="${k === 'auto' ? 'По блоку страны' : DOCS[k].d}">${n}</button>`).join('')}</div>
@@ -40,7 +40,7 @@ function showStart() {
     <div class="note">Управление: ЛКМ — выбор, ПКМ — приказ, колесо — масштаб, Пробел — пауза. На телефоне: щипок, долгое нажатие — приказ.</div>
   </div>`;
   renderStartList();
-  window.startSelect(UI.start.c >= 0 ? UI.start.c : cidx['POL']);
+  window.startSelect(UI.start.c >= 0 ? UI.start.c : cidx['US1']);
   // slow idle drift not needed; show whole world
 }
 function renderStartList() {
@@ -90,6 +90,7 @@ function afterNew() {
   buildHUD(); closeModalSilently();
   const c = G.C[G.player]; focusLoc(c.cap, 3.4); selectProv(c.cap);
   refreshHUD(true);
+  UI.tut = UI.tutOff ? -1 : 0;
   openModal('tutorial');
 }
 function closeModalSilently() { UI.modal = null; $('modal-back').classList.add('hidden'); }

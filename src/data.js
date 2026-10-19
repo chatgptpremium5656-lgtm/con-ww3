@@ -127,7 +127,7 @@ const BLOCS = {
 };
 
 const DIFF = {
-  easy: { n: 'Лёгкая', aiEco: 0.8, aiAgg: 0.6, pace: 0.45 },
+  easy: { n: 'Лёгкая', aiEco: 0.8, aiAgg: 0.6, pace: 0.3 },
   normal: { n: 'Нормальная', aiEco: 1.0, aiAgg: 1.0, pace: 0.8 },
   hard: { n: 'Сложная', aiEco: 1.25, aiAgg: 1.4, pace: 1 }
 };

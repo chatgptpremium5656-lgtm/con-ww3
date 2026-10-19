@@ -247,10 +247,41 @@ function refreshHUD(force) {
   { const done = G.goalsDone || []; const todo = GOALS.filter(g => !done.includes(g.id)).slice(0, 3);
     const gp = $('goals'); const html = `<h5><span>🎯 Цели ${done.length}/${GOALS.length}</span><span>${gp.classList.contains('min') ? '▸' : '▾'}</span></h5>` + (todo.length ? todo.map(g => `<div class="g">▫ ${g.t}</div>`).join('') : '<div class="g">Все цели выполнены! 🏆</div>') + `<div class="note" style="margin-top:4px">Рейтинг: ${rankOf(G.player)}-е место, ${fmt(scoreOf(G.player))} очков</div><div class="note">★ Победа: ${G.myVP || 0} / ${Math.ceil(G.totalVP * G.opts.win)} ПО (${Math.round((G.myVP || 0) / G.totalVP * 100)}% из ${Math.round(G.opts.win * 100)}%)</div>`;
     if (UI._goalsH !== html) { gp.innerHTML = html; UI._goalsH = html; } }
-  renderProvPanel(force); renderUnitPanel(force);
+  renderProvPanel(force); renderUnitPanel(force); updateTutorial();
   if (UI.modal && (!document.activeElement || !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) renderModal(true);
 }
 
+/* ---- guided tutorial ---- */
+function weakestNeighbor() {
+  let best = -1, bp = 1e18; for (const o of neighborsOf(G.player)) { if (areAllied(o, G.player) || !G.C[o].alive) continue; const p = alliancePower(o); if (p < bp) { bp = p; best = o; } }
+  return best >= 0 ? G.C[best].n : 'любого соседа';
+}
+const TUT = [
+  { t: 'Добро пожаловать, командир! Нажмите <b>▶ (или Пробел)</b>, чтобы запустить время. Игра идёт в реальном времени: 1 секунда ≈ несколько игровых часов.', hl: '#tb-speed [data-v="2"]', ok: () => !G.paused },
+  { t: 'Справа — панель вашей столицы. Постройте здание: нажмите <b>«＋»</b> рядом с «Инфраструктура» или «Казармы». Здания дают доход и открывают войска.', hl: '#prov-panel [data-act="build"]:not([disabled])', ok: C => (C.stats.built || 0) >= 1 },
+  { t: 'Закажите войска: в блоке «Производство» нажмите на <b>«Пехота»</b>. Ресурсы спишутся сразу, юнит появится по готовности (полоса ниже).', hl: '#prov-panel [data-act="queue"][data-t="inf"]:not([disabled]), #prov-panel [data-act="queue"]:not([disabled])', ok: C => (C.stats.queued || 0) >= 1 },
+  { t: 'Ждём юнита. Ускорьте время кнопками <b>2×–5×</b> вверху или нажмите <b>⏩</b> у заказа (платное ускорение).', hl: '#prov-panel [data-act="speedup"], #tb-speed [data-v="4"]', ok: C => (C.stats.trained || 0) >= 1 },
+  { t: 'Выберите войска: кликните по <b>значку на карте</b> или нажмите «Выбрать все мои войска здесь» в панели провинции.', hl: '#prov-panel [data-act="selall"]', ok: () => SEL.units.size > 0 },
+  { t: 'Отдайте приказ: нажмите <b>«Идти»</b> внизу и кликните по соседней провинции — или просто <b>правой кнопкой мыши</b> по ней (на телефоне — долгое нажатие).', hl: '#unit-panel [data-act="mode"][data-m="move"]', ok: C => (C.stats.moved || 0) >= 1 },
+  { t: 'Откройте <b>🔬 Наука</b> и начните любое исследование — оно улучшит ваши войска и экономику.', hl: '#lb-research', ok: C => (C.stats.researched || 0) >= 1 },
+  { t: 'Если красным мигает ресурс (🌾📦⛽) — не хватает. Игра <b>докупает дефицит автоматически</b>, а вручную можно в <b>💱 Рынке</b>. Откройте его.', hl: '#lb-market', ok: () => UI.seenMarket },
+  { t: () => `Пора воевать! Откройте <b>🤝 Дипломатия</b>, выберите страну (например, <b>${weakestNeighbor()}</b>) и нажмите «Объявить войну» (дважды — для подтверждения). Сначала накопите 10–20 юнитов!`, hl: '#lb-diplomacy', ok: C => (C.stats.wars || 0) >= 1 },
+  { t: 'Война! Выберите войска и отправьте их в <b>провинцию врага</b> (ПКМ). Когда защитники уничтожены, идёт <b>захват</b> — удерживайте провинцию, пока полоса дойдёт до 100%. Вокруг ⚔ — идёт бой.', hl: '', ok: C => (C.stats.taken || 0) >= 1 },
+  { t: 'Отлично! Вы захватили провинцию. Дальше ориентируйтесь на <b>🎯 Цели</b> слева и на ★ победные очки. Обучение закончено — удачи!', hl: '', ok: () => UI._tutEnd && Date.now() - UI._tutEnd > 7000, end: true }
+];
+function updateTutorial() {
+  const el = $('tut');
+  document.querySelectorAll('.tuthl').forEach(e => e.classList.remove('tuthl'));
+  if (UI.tut === undefined || UI.tut < 0 || UI.tut >= TUT.length || UI.modal === 'tutorial') { el.classList.add('hidden'); return; }
+  const C = G.C[G.player]; let st = TUT[UI.tut];
+  if (st.end && !UI._tutEnd) UI._tutEnd = Date.now();
+  while (UI.tut < TUT.length && TUT[UI.tut].ok(C)) { UI.tut++; UI._tutEnd = 0; Snd.play('ok'); if (UI.tut >= TUT.length) { el.classList.add('hidden'); return; } st = TUT[UI.tut]; if (st.end) UI._tutEnd = Date.now(); }
+  const txt = typeof st.t === 'function' ? st.t() : st.t;
+  const html = `<h5>🎓 Обучение · шаг ${UI.tut + 1} из ${TUT.length}</h5><p>${txt}</p><div class="row"><button class="btn sm" data-act="tutskip">Пропустить шаг ➜</button><button class="btn sm" data-act="tutoff">Выключить обучение</button></div>`;
+  if (UI._tutH !== html) { el.innerHTML = html; UI._tutH = html; }
+  el.classList.remove('hidden');
+  if (st.hl) { const t = document.querySelector(st.hl); if (t) t.classList.add('tuthl'); }
+}
 /* ---- province panel ---- */
 function unitsAt(loc) { const o = []; for (const id of G.at[loc]) { const u = G.U.get(id); if (u && u.st !== 'cargo' && isVisible(u)) o.push(u); } return o; }
 function renderProvPanel(force) {
@@ -404,6 +435,8 @@ function act(a, d, el, e) {
     case 'stop': stopUnits([...SEL.units]); renderUnitPanel(); break;
     case 'recall': for (const id of SEL.units) { const u = G.U.get(id); if (u && (u.st === 'patrol' || u.st === 'strike')) returnToBase(u); } toast('Авиация возвращается на базы', 'good'); break;
     case 'build': { const err = startBuild(+d.p, d.b); if (err) toast(err, 'war'); else Snd.play('ok'); renderProvPanel(true); break; }
+    case 'tutskip': UI.tut++; UI._tutH = ''; updateTutorial(); break;
+    case 'tutoff': UI.tut = -1; UI.tutOff = true; $('tut').classList.add('hidden'); document.querySelectorAll('.tuthl').forEach(e => e.classList.remove('tuthl')); break;
     case 'speedup': { const err = speedUp(+d.p, d.k, 0); if (err) toast(err, 'war'); else Snd.play('ok'); renderProvPanel(true); break; }
     case 'spy': { const err = sendSpy(G.player, +d.p, d.m); if (err) toast(err, 'war'); else { toast(`Агент отправлен: ${SPY[d.m].n}`, 'good'); Snd.play('ok'); } renderProvPanel(true); break; }
     case 'cancelbuild': cancelBuild(+d.p); renderProvPanel(true); break;

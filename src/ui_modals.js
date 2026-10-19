@@ -2,7 +2,7 @@
 /* ===== Modal windows ===== */
 const TITLES = { overview: '🌍 Обзор', army: '🎖 Армия и производство', research: '🔬 Исследования', diplomacy: '🤝 Дипломатия', market: '💱 Мировой рынок', events: '📰 События', help: '❓ Справочник командира', menu: '☰ Меню', layers: '🗺 Слои карты', tutorial: '🎖 Добро пожаловать, командующий' };
 const TABS = { overview: [['country', 'Моя страна'], ['world', 'Страны мира'], ['wars', 'Войны'], ['victory', 'Победа']], army: [['units', 'Войска'], ['prod', 'Производство'], ['build', 'Строительство'], ['spies', 'Разведка']], events: [['mine', 'Мои'], ['all', 'Мировые']] };
-function openModal(m) { hideTip(); UI.hoverTip = null; UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
+function openModal(m) { if (m === 'market') UI.seenMarket = true; hideTip(); UI.hoverTip = null; UI.modal = m; if (m === 'events') UI.unseen = 0; $('modal-back').classList.remove('hidden'); renderModal(false); }
 function closeModal() { UI.modal = null; $('modal-back').classList.add('hidden'); hideTip(); }
 $('modal-back').addEventListener('mousedown', e => { if (e.target.id === 'modal-back') closeModal(); });
 
@@ -211,7 +211,7 @@ function tutorialHTML() {
   <li><b>Приказы.</b> Кликните по значку войск, затем <b>правой кнопкой</b> (на телефоне — долгое нажатие) по цели. Кнопки внизу: идти, удар, патруль, пуск.</li>
   <li><b>Дипломатия.</b> Кнопка 🤝: объявляйте войну, просите мир, вступайте в альянсы. Союзники делят обзор и приходят на помощь.</li>
   <li><b>Время.</b> Игра идёт в реальном времени. Пауза — пробел, скорость — клавиши 1–5. Следите за дефицитом 🌾📦⛽ — покупайте на рынке 💱.</li></ol>
-  <p class="note">Подсказка: подготовьтесь до начала войны, а затем объявляйте её слабому соседу.</p><div class="row"><button class="btn pri" style="flex:1" data-act="tutgo">▶ Начать игру</button></div></div>`;
+  <p class="note">Подсказка: подготовьтесь до начала войны, а затем объявляйте её слабому соседу.</p><div class="row"><button class="btn pri" style="flex:1" data-act="tutgo">▶ Начать (с пошаговым обучением)</button></div></div>`;
 }
 function unitTableHTML() {
   let h = `<table class="t" style="font-size:12px"><tr><th>Юнит</th><th>Пехота</th><th>Техника</th><th>Воздух</th><th>Флот</th><th>Здания</th><th>Броня</th><th>Скор.</th><th>Дальн.</th></tr>`;
@@ -223,7 +223,7 @@ function slotInfo(n) { try { const m = JSON.parse(localStorage.getItem('conww3_m
 function menuHTML() {
   let h = `<div style="display:flex;flex-direction:column;gap:8px"><button class="btn pri" data-act="closemodal">▶ Продолжить</button>`;
   for (const n of [1, 2, 3]) { const m = slotInfo(n); h += `<div class="row"><button class="btn" style="flex:1" data-act="save" data-n="${n}">💾 Сохранить в слот ${n}</button><button class="btn" style="flex:1" data-act="loadslot" data-n="${n}" ${m ? '' : 'disabled'}>📂 ${m ? esc(m.t) : 'пусто'}</button></div>`; }
-  h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
+  h += `<div class="row"><label><input type="checkbox" ${UI.sound ? 'checked' : ''} data-act="optsound"> 🔊 Звук</label><label><input type="checkbox" ${MV.labels ? 'checked' : ''} data-act="optlabels"> Подписи стран</label><label><input type="checkbox" ${G.fogOff ? '' : 'checked'} data-act="optfog"> Туман войны</label><label><input type="checkbox" ${G.autoBuy === false ? '' : 'checked'} data-act="optauto"> Авто-закупка дефицита</label><label><input type="checkbox" ${UI.tut >= 0 ? 'checked' : ''} data-act="opttut"> Обучение</label><label><input type="checkbox" ${MV.daynight === false ? '' : 'checked'} data-act="optdn"> День/ночь</label></div>`;
   h += `<div class="row"><button class="btn danger" style="flex:1" data-act="newgame">⟲ Новая игра</button></div></div>`;
   return h;
 }
@@ -271,6 +271,8 @@ window.actModal = function (a, d, el, e) {
     case 'loadslot': if (doLoad('conww3_s' + d.n)) closeModal(); break;
     case 'tutgo': closeModal(); G.paused = false; G.speed = 2; updateSpeedBtns(); break;
     case 'optsound': UI.sound = el.checked; break;
+    case 'optauto': G.autoBuy = el.checked; break;
+    case 'opttut': UI.tutOff = !el.checked; UI.tut = el.checked ? 0 : -1; UI._tutH = ''; break;
     case 'optdn': MV.daynight = el.checked; MV.dirty = true; break;
     case 'optlabels': MV.labels = el.checked; MV.dirty = true; break;
     case 'optfog': G.fogOff = !el.checked; updateVis(true); MV.dirty = true; break;

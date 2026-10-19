@@ -54,6 +54,7 @@ function dayTick() {
     if (G.C[a].alliance >= 0 && G.C[a].alliance === G.C[b].alliance) v = Math.min(100, v + 0.2);
     G.rel[i] = G.rel[j] = clamp(v, -100, 100);
   }
+  if (G.autoBuy !== false && G.C[G.player].alive) aiTrade(G.C[G.player]);
   checkVictory();
 }
 
@@ -286,7 +287,7 @@ function orderMove(ids, dest) {
       u.leg = { fx: u.leg.fx + (u.leg.tx - u.leg.fx) * u.leg.done / u.leg.d, fy: u.leg.fy + (u.leg.ty - u.leg.fy) * u.leg.done / u.leg.d, tx: lx(from), ty: ly(from), d: Math.max(0.1, u.leg.done), done: 0, to: from, back: true };
       path = [from].concat(path);
     }
-    u.path = path; u.lock = false;
+    u.path = path; u.lock = false; if (u.o === G.player && path.length) bump(u.o, 'moved');
     u.st = path.length || u.leg ? 'move' : 'idle';
     n++;
   }

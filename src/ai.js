@@ -166,14 +166,14 @@ function aiMilitary(C) {
   if (!enemies.length) { C.ai_s.front = null; return; }
   const my = unitsOf(C.id);
   const land = my.filter(u => UNITS[u.t].dom === 'land' && u.st === 'idle');
-  const grace = G.hour < 24 * 8;
+  const grace = G.hour < 24 * (G.opts.diff === 'easy' ? 14 : 8);
   const pace = DIFF[G.opts.diff].pace || 1;
   const vsPlayer = enemies.includes(G.player);
   const slow = vsPlayer && R() > pace;
   aiLand(C, enemies, land, my, grace || slow);
   if (grace) return;
   aiSpies(C, enemies);
-  const fresh = e => e === G.player && G.hour - G.warStart[C.id * NC + e] < 48;
+  const fresh = e => e === G.player && G.hour - G.warStart[C.id * NC + e] < (G.opts.diff === 'easy' ? 24 * 6 : 48);
   const hot = enemies.filter(e => !fresh(e));
   if (hot.length) { if (!slow) aiAir(C, hot, my); aiNavy(C, enemies, my); aiMissiles(C, hot, my); }
 }
